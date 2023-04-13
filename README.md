@@ -1,6 +1,6 @@
 # Azure Virtual Desktop Scaling Tool
 
-This solution is a modernized version of the tool provided in the [AVD documentation](https://docs.microsoft.com/azure/virtual-desktop/set-up-scaling-script) and is contained in one deployment. The Automation Account uses a System Assigned Identity with Contributor rights on the AVD resource groups, reducing the scope of permissions. The following resources are deployed with this solution:
+This solution is a modernized version of the Scaling Tool provided in the [AVD documentation](https://docs.microsoft.com/azure/virtual-desktop/set-up-scaling-script) and is contained in one deployment. The Automation Account uses a System Assigned Identity with Contributor rights on the AVD resource groups, reducing the scope of given permissions. The following resources are deployed with this solution:
 
 * Automation Account
   * Runbook
@@ -16,43 +16,19 @@ By specifying a value for "LogAnalyticsWorkspaceResourceId" parameter, the Runbo
 
 Ensure the principal deploying this solution has Owner rights on the Azure subscription.
 
-## Template Parameters
-
-### REQUIRED
-
-* **AutomationAccountName**: Name for a new or existing Automation Account
-* **BeginPeakTime**: Time when session hosts will scale up and continue to stay on to support peak demand; Format 24 hours, e.g. 9:00 for 9am
-* **EndPeakTime**: Time when session hosts will scale down and stay off to support low demand; Format 24 hours, e.g. 17:00 for 5pm
-* **HostPoolName**: Name of the AVD host pool to target for scaling
-* **HostPoolResourceGroupName**: Name of the resource group for the AVD host pool to target for scaling
-* **HostsResourceGroupName**: Name of the resource group for the AVD session hosts
-* **LimitSecondsToForceLogOffUser**: The number of seconds to wait before automatically signing out users. If set to 0, any session host that has user sessions will be left untouched
-* **LogicAppName**: Name for the new or existing Logic App
-* **MinimumNumberOfRdsh**: The minimum number of session host VMs to keep running during off-peak hours
-* **SessionThresholdPerCPU**: The maximum number of sessions per CPU that will be used as a threshold to determine when new session host VMs need to be started during peak hours
-* **TimeDifference**: Time zone off set for host pool location; Format 24 hours, e.g. -4:00 for Eastern Daylight Time
-
-### OPTIONAL
-
-* **LogAnalyticsWorkspaceResourceId**: Resource ID of the Log Analytics Workspace to use for logging the Runbook jobs and job stream in Azure Automation
-
-### DO NOT MODIFY
-
-* **Timestamp**: The "utcNow" function is used to set a unique name and the expiration on the webhook
-
 ## Deploy to Azure
 
 ### Azure Portal
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjamasten%2FAzure%2Fmaster%2Fsolutions%2FscalingAutomation%2Fsolution.json)
-[![Deploy to Azure Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjamasten%2FAzure%2Fmaster%2Fsolutions%2FscalingAutomation%2Fsolution.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjamasten%2FAvdScalingTool%2Fmain%2Fsolution.json)
+[![Deploy to Azure Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjamasten%2FAvdScalingTool%2Fmain%2Fsolution.json)
 
 ### PowerShell
 
 ````powershell
 New-AzResourceGroupDeployment `
     -ResourceGroupName '<Resource Group Name>' `
-    -TemplateFile 'https://raw.githubusercontent.com/jamasten/Azure/master/solutions/scalingAutomation/solution.json' `
+    -TemplateFile 'https://raw.githubusercontent.com/jamasten/AvdScalingTool/main/solution.json' `
     -AutomationAccountName '<Automation Account Name>' `
     -BeginPeakTime '<Start of Peak Usage>' `
     -EndPeakTime '<End of Peak Usage>' `
@@ -73,7 +49,7 @@ New-AzResourceGroupDeployment `
 ````cli
 az deployment group create \
     --resource-group '<Resource Group Name>' \
-    --template-uri 'https://raw.githubusercontent.com/jamasten/Azure/master/solutions/scalingAutomation/solution.json' \
+    --template-uri 'https://raw.githubusercontent.com/jamasten/AvdScalingTool/main/solution.json' \
     --parameters \
         AutomationAccountName='<Automation Account Name>' \
         BeginPeakTime='<Start of Peak Usage>' \
