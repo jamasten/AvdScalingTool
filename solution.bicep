@@ -138,20 +138,22 @@ var TimeZones = {
 }
 
 
-module automationAccount 'modules/automationAccount.bicep' = if(!ExistingAutomationAccount) {
-  name: 'AutomationAccount_${Timestamp}'
-  params: {
-    AutomationAccountName: AutomationAccountName
-    Location: Location
-    Tags: Tags
+resource automationAccount 'Microsoft.Automation/automationAccounts@2022-08-08' = if(!ExistingAutomationAccount) {
+  name: AutomationAccountName
+  location: Location
+  tags: Tags
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    sku: {
+      name: 'Free'
+    }
   }
 }
 
-resource automationAccount_existing 'Microsoft.Automation/automationAccounts@2022-08-08' = {
-  name: AutomationAccountName
-  dependsOn: [
-    automationAccount
-  ]
+resource automationAccount_existing 'Microsoft.Automation/automationAccounts@2022-08-08' existing = {
+  name: automationAccount.name
 }
 
 resource runbook 'Microsoft.Automation/automationAccounts/runbooks@2022-08-08' = {

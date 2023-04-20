@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.16.2.56959",
-      "templateHash": "13038308478230083171"
+      "templateHash": "6557039358816449836"
     }
   },
   "parameters": {
@@ -184,12 +184,20 @@
   },
   "resources": [
     {
+      "condition": "[not(parameters('ExistingAutomationAccount'))]",
       "type": "Microsoft.Automation/automationAccounts",
       "apiVersion": "2022-08-08",
       "name": "[parameters('AutomationAccountName')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', format('AutomationAccount_{0}', parameters('Timestamp')))]"
-      ]
+      "location": "[parameters('Location')]",
+      "tags": "[parameters('Tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "sku": {
+          "name": "Free"
+        }
+      }
     },
     {
       "type": "Microsoft.Automation/automationAccounts/runbooks",
@@ -292,68 +300,6 @@
       "dependsOn": [
         "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
       ]
-    },
-    {
-      "condition": "[not(parameters('ExistingAutomationAccount'))]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "[format('AutomationAccount_{0}', parameters('Timestamp'))]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "AutomationAccountName": {
-            "value": "[parameters('AutomationAccountName')]"
-          },
-          "Location": {
-            "value": "[parameters('Location')]"
-          },
-          "Tags": {
-            "value": "[parameters('Tags')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.16.2.56959",
-              "templateHash": "2045105181871800126"
-            }
-          },
-          "parameters": {
-            "AutomationAccountName": {
-              "type": "string"
-            },
-            "Location": {
-              "type": "string"
-            },
-            "Tags": {
-              "type": "object"
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Automation/automationAccounts",
-              "apiVersion": "2022-08-08",
-              "name": "[parameters('AutomationAccountName')]",
-              "location": "[parameters('Location')]",
-              "tags": "[parameters('Tags')]",
-              "identity": {
-                "type": "SystemAssigned"
-              },
-              "properties": {
-                "sku": {
-                  "name": "Free"
-                }
-              }
-            }
-          ]
-        }
-      }
     },
     {
       "copy": {
