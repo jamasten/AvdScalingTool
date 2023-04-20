@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.16.2.56959",
-      "templateHash": "3615037903864136837"
+      "templateHash": "16452650561991067877"
     }
   },
   "parameters": {
@@ -62,7 +62,7 @@
   },
   "variables": {
     "RoleAssignments": "[if(equals(parameters('HostPoolResourceGroupName'), parameters('SessionHostsResourceGroupName')), createArray(parameters('HostPoolResourceGroupName')), createArray(parameters('HostPoolResourceGroupName'), parameters('SessionHostsResourceGroupName')))]",
-    "RunbookName": "AvdAutoScale",
+    "RunbookName": "AvdScalingTool",
     "TimeDifferences": {
       "australiacentral": "+10:00",
       "australiacentral2": "+10:00",

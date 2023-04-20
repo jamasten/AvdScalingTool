@@ -20,7 +20,7 @@ var RoleAssignments = HostPoolResourceGroupName == SessionHostsResourceGroupName
   HostPoolResourceGroupName
   SessionHostsResourceGroupName
 ]
-var RunbookName = 'AvdAutoScale'
+var RunbookName = 'AvdScalingTool'
 var TimeDifferences = {
   australiacentral: '+10:00'
   australiacentral2: '+10:00'
