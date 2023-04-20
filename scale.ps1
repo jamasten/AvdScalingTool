@@ -455,7 +455,7 @@ try
 
 		$VM = $VMs[$VMName]
 		$SessionHost = $VM.SessionHost
-        if ((Get-PSObjectPropVal -Obj $SessionHost -Key 'VirtualMachineId') -and $VMInstance.VmId -ine $SessionHost.VirtualMachineId)
+        if (($SessionHost.VirtualMachineId) -and $VMInstance.VmId -ine $SessionHost.VirtualMachineId)
         {
             # This VM is not a WVD session host
             continue
