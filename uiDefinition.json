@@ -69,7 +69,7 @@
                                 "required": true
                             },
                             "infoMessages": [],
-                            "visible": true
+                            "visible": "[steps('scaling').existingAutomationAccount]"
                         },
                         {
                             "name": "scope",
