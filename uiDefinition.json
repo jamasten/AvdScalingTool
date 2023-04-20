@@ -48,17 +48,28 @@
                             "visible": "[equals(steps('scaling').existingAutomationAccount, false)]"
                         },
                         {
-                            "name": "existingAutomationAccountSelector",
-                            "type": "Microsoft.Solutions.ResourceSelector",
+                            "name": "automationAccountsApi",
+                            "type": "Microsoft.Solutions.ArmApiControl",
+                            "request": {
+                                "method": "GET",
+                                "path": "[concat(steps('basics').resourceScope.subscription.id, '/resourceGroups/', steps('basics').resourceScope.resourceGroup.name, '/providers/Microsoft.Automation/automationAccounts?api-version=2021-06-22')]"
+                            }
+                        },
+                        {
+                            "name": "existingAutomationAccountDropDown",
+                            "type": "Microsoft.Common.DropDown",
                             "label": "Automation Account",
-                            "resourceType": "Microsoft.Automation/automationAccounts",
-                            "options": {
-                                "filter": {
-                                    "subscription": "onBasics",
-                                    "location": "onBasics"
-                                }
+                            "multiselect": false,
+                            "defaultValue": "",
+                            "toolTip": "Select the name of the existing automation account.",
+                            "filterPlaceholder": "",
+                            "defaultDescription": "",
+                            "constraints": {
+                                "allowedValues": "[map(steps('scaling').automationAccountsApi.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.name, '\"}')))]",
+                                "required": true
                             },
-                            "visible": "[steps('scaling').existingAutomationAccount]"
+                            "infoMessages": [],
+                            "visible": true
                         },
                         {
                             "name": "scope",
@@ -279,7 +290,7 @@
         },
         "outputs": {
             "parameters": {
-                "AutomationAccountName": "[if(steps('scaling').existingAutomationAccount, steps('scaling').existingAutomationAccountSelector.name, steps('scaling').automationAccountName)]",
+                "AutomationAccountName": "[if(steps('scaling').existingAutomationAccount, steps('scaling').existingAutomationAccountDropDown, steps('scaling').automationAccountName)]",
                 "BeginPeakTime": "[steps('scaling').options.beginPeakTime]",
                 "EndPeakTime": "[steps('scaling').options.endPeakTime]",
                 "ExistingAutomationAccount": "[steps('scaling').existingAutomationAccount]",
