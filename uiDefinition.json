@@ -279,7 +279,7 @@
                 {
                     "name": "monitoring",
                     "label": "Monitoring",
-                    "visible": "[steps('basics').enableMonitoringAlerting]",
+                    "visible": "[equals(steps('basics').enableMonitoringAlerting, true)]",
                     "elements": [
                         {
                             "name": "logAnalyticsWorkspace",
