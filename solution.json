@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.16.2.56959",
-      "templateHash": "16452650561991067877"
+      "templateHash": "13038308478230083171"
     }
   },
   "parameters": {
@@ -56,6 +56,10 @@
       "type": "object"
     },
     "Timestamp": {
+      "type": "string",
+      "defaultValue": "[utcNow('yyyyMMddhhmmss')]"
+    },
+    "Time": {
       "type": "string",
       "defaultValue": "[utcNow('u')]"
     }
@@ -180,27 +184,11 @@
   },
   "resources": [
     {
-      "condition": "[not(parameters('ExistingAutomationAccount'))]",
-      "type": "Microsoft.Automation/automationAccounts",
-      "apiVersion": "2022-08-08",
-      "name": "[parameters('AutomationAccountName')]",
-      "location": "[parameters('Location')]",
-      "tags": "[parameters('Tags')]",
-      "identity": {
-        "type": "SystemAssigned"
-      },
-      "properties": {
-        "sku": {
-          "name": "Free"
-        }
-      }
-    },
-    {
       "type": "Microsoft.Automation/automationAccounts",
       "apiVersion": "2022-08-08",
       "name": "[parameters('AutomationAccountName')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
+        "[resourceId('Microsoft.Resources/deployments', format('AutomationAccount_{0}', parameters('Timestamp')))]"
       ]
     },
     {
@@ -236,7 +224,7 @@
         "expiryTime": null,
         "frequency": "Hour",
         "interval": 1,
-        "startTime": "[dateTimeAdd(parameters('Timestamp'), format('PT{0}M', mul(add(range(0, 4)[copyIndex()], 1), 15)))]",
+        "startTime": "[dateTimeAdd(parameters('Time'), format('PT{0}M', mul(add(range(0, 4)[copyIndex()], 1), 15)))]",
         "timeZone": "[variables('TimeZones')[parameters('Location')]]"
       },
       "dependsOn": [
@@ -250,7 +238,7 @@
       },
       "type": "Microsoft.Automation/automationAccounts/jobSchedules",
       "apiVersion": "2022-08-08",
-      "name": "[format('{0}/{1}', parameters('AutomationAccountName'), guid(parameters('Timestamp'), variables('RunbookName'), parameters('HostPoolName'), string(range(0, 4)[copyIndex()])))]",
+      "name": "[format('{0}/{1}', parameters('AutomationAccountName'), guid(parameters('Time'), variables('RunbookName'), parameters('HostPoolName'), string(range(0, 4)[copyIndex()])))]",
       "properties": {
         "parameters": {
           "TenantId": "[subscription().tenantId]",
@@ -306,13 +294,75 @@
       ]
     },
     {
+      "condition": "[not(parameters('ExistingAutomationAccount'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('AutomationAccount_{0}', parameters('Timestamp'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "AutomationAccountName": {
+            "value": "[parameters('AutomationAccountName')]"
+          },
+          "Location": {
+            "value": "[parameters('Location')]"
+          },
+          "Tags": {
+            "value": "[parameters('Tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.16.2.56959",
+              "templateHash": "2045105181871800126"
+            }
+          },
+          "parameters": {
+            "AutomationAccountName": {
+              "type": "string"
+            },
+            "Location": {
+              "type": "string"
+            },
+            "Tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Automation/automationAccounts",
+              "apiVersion": "2022-08-08",
+              "name": "[parameters('AutomationAccountName')]",
+              "location": "[parameters('Location')]",
+              "tags": "[parameters('Tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "sku": {
+                  "name": "Free"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "copy": {
         "name": "roleAssignments",
         "count": "[length(range(0, length(variables('RoleAssignments'))))]"
       },
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "[format('RoleAssignment_{0}', variables('RoleAssignments')[range(0, length(variables('RoleAssignments')))[copyIndex()]])]",
+      "name": "[format('RoleAssignment_{0}_{1}', variables('RoleAssignments')[range(0, length(variables('RoleAssignments')))[copyIndex()]], parameters('Timestamp'))]",
       "resourceGroup": "[variables('RoleAssignments')[range(0, length(variables('RoleAssignments')))[copyIndex()]]]",
       "properties": {
         "expressionEvaluationOptions": {

@@ -11,7 +11,8 @@ param MinimumNumberOfRdsh string = '0'
 param SessionHostsResourceGroupName string
 param SessionThresholdPerCPU string = '1'
 param Tags object
-param Timestamp string = utcNow('u')
+param Timestamp string = utcNow('yyyyMMddhhmmss')
+param Time string = utcNow('u')
 
 
 var RoleAssignments = HostPoolResourceGroupName == SessionHostsResourceGroupName ? [
@@ -137,22 +138,20 @@ var TimeZones = {
 }
 
 
-resource automationAccount 'Microsoft.Automation/automationAccounts@2022-08-08' = if(!ExistingAutomationAccount) {
-  name: AutomationAccountName
-  location: Location
-  tags: Tags
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    sku: {
-      name: 'Free'
-    }
+module automationAccount 'modules/automationAccount.bicep' = if(!ExistingAutomationAccount) {
+  name: 'AutomationAccount_${Timestamp}'
+  params: {
+    AutomationAccountName: AutomationAccountName
+    Location: Location
+    Tags: Tags
   }
 }
 
 resource automationAccount_existing 'Microsoft.Automation/automationAccounts@2022-08-08' = {
-  name: automationAccount.name
+  name: AutomationAccountName
+  dependsOn: [
+    automationAccount
+  ]
 }
 
 resource runbook 'Microsoft.Automation/automationAccounts/runbooks@2022-08-08' = {
@@ -180,7 +179,7 @@ resource schedules 'Microsoft.Automation/automationAccounts/schedules@2022-08-08
     expiryTime: null
     frequency: 'Hour'
     interval: 1
-    startTime: dateTimeAdd(Timestamp, 'PT${(i+1)*15}M')
+    startTime: dateTimeAdd(Time, 'PT${(i+1)*15}M')
     timeZone: TimeZones[Location]
   }
 }]
@@ -188,7 +187,7 @@ resource schedules 'Microsoft.Automation/automationAccounts/schedules@2022-08-08
 resource jobSchedules 'Microsoft.Automation/automationAccounts/jobSchedules@2022-08-08' = [for i in range(0, 4): {
   parent: automationAccount_existing
   #disable-next-line use-stable-resource-identifiers
-  name: guid(Timestamp, RunbookName, HostPoolName, string(i))
+  name: guid(Time, RunbookName, HostPoolName, string(i))
   properties: {
     parameters: {
       TenantId: subscription().tenantId
@@ -236,7 +235,7 @@ resource diagnostics 'Microsoft.Insights/diagnosticsettings@2017-05-01-preview' 
 
 // Gives the Automation Account the "Desktop Virtualization Power On Off Contributor" role on the resource groups containing the hosts and host pool
 module roleAssignments'modules/roleAssignments.bicep' = [for i in range(0, length(RoleAssignments)): {
-  name: 'RoleAssignment_${RoleAssignments[i]}'
+  name: 'RoleAssignment_${RoleAssignments[i]}_${Timestamp}'
   scope: resourceGroup(RoleAssignments[i])
   params: {
     PrincipalId: automationAccount_existing.identity.principalId
