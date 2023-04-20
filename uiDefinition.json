@@ -77,7 +77,7 @@
                                     "filterPlaceholder": "",
                                     "defaultDescription": "",
                                     "constraints": {
-                                        "allowedValues": "[map(steps('basics').scaling.scope.resourceGroupsApi.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.name, '\"}')))]",
+                                        "allowedValues": "[map(steps('scaling').scope.resourceGroupsApi.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.name, '\"}')))]",
                                         "required": true
                                     },
                                     "infoMessages": [],
