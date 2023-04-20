@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.16.2.56959",
-      "templateHash": "2467243259863952071"
+      "templateHash": "7975936654352810320"
     }
   },
   "parameters": {
@@ -19,6 +19,9 @@
     "EndPeakTime": {
       "type": "string",
       "defaultValue": "17:00"
+    },
+    "ExistingAutomationAccount": {
+      "type": "bool"
     },
     "HostPoolName": {
       "type": "string"
@@ -177,6 +180,7 @@
   },
   "resources": [
     {
+      "condition": "[not(parameters('ExistingAutomationAccount'))]",
       "type": "Microsoft.Automation/automationAccounts",
       "apiVersion": "2022-08-08",
       "name": "[parameters('AutomationAccountName')]",
@@ -190,6 +194,12 @@
           "name": "Free"
         }
       }
+    },
+    {
+      "condition": "[parameters('ExistingAutomationAccount')]",
+      "type": "Microsoft.Automation/automationAccounts",
+      "apiVersion": "2022-08-08",
+      "name": "[parameters('AutomationAccountName')]"
     },
     {
       "type": "Microsoft.Automation/automationAccounts/runbooks",
@@ -207,6 +217,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]",
         "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
       ]
     },
@@ -217,7 +228,7 @@
       },
       "type": "Microsoft.Automation/automationAccounts/schedules",
       "apiVersion": "2022-08-08",
-      "name": "[format('{0}/{1}', parameters('AutomationAccountName'), format('{0}_{1}min', parameters('HostPoolName'), mul(add(range(0, 4)[copyIndex()], 1), 15)))]",
+      "name": "[format('{0}/{1}_{2}min', parameters('AutomationAccountName'), parameters('HostPoolName'), mul(add(range(0, 4)[copyIndex()], 1), 15))]",
       "properties": {
         "advancedSchedule": {},
         "description": null,
@@ -228,6 +239,7 @@
         "timeZone": "[variables('TimeZones')[parameters('Location')]]"
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]",
         "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
       ]
     },
@@ -257,24 +269,24 @@
           "LogOffMessageBody": "Your session will be logged off. Please save and close everything."
         },
         "runbook": {
-          "name": "[variables('RunbookName')]"
+          "name": "[format('{0}/{1}', parameters('AutomationAccountName'), variables('RunbookName'))]"
         },
         "runOn": null,
         "schedule": {
-          "name": "[format('{0}_{1}min', parameters('HostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15))]"
+          "name": "[format('{0}/{1}_{2}min', parameters('AutomationAccountName'), parameters('HostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15))]"
         }
       },
       "dependsOn": [
         "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]",
-        "[resourceId('Microsoft.Automation/automationAccounts/runbooks', parameters('AutomationAccountName'), variables('RunbookName'))]",
-        "[resourceId('Microsoft.Automation/automationAccounts/schedules', parameters('AutomationAccountName'), format('{0}_{1}min', parameters('HostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15)))]"
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/runbooks', split(format('{0}/{1}', parameters('AutomationAccountName'), variables('RunbookName')), '/')[0], split(format('{0}/{1}', parameters('AutomationAccountName'), variables('RunbookName')), '/')[1])]",
+        "[resourceId('Microsoft.Automation/automationAccounts/schedules', split(format('{0}/{1}_{2}min', parameters('AutomationAccountName'), parameters('HostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15)), '/')[0], split(format('{0}/{1}_{2}min', parameters('AutomationAccountName'), parameters('HostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15)), '/')[1])]"
       ]
     },
     {
       "condition": "[not(empty(parameters('LogAnalyticsWorkspaceResourceId')))]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2017-05-01-preview",
-      "scope": "[format('Microsoft.Automation/automationAccounts/{0}', parameters('AutomationAccountName'))]",
       "name": "[format('diag-{0}', parameters('AutomationAccountName'))]",
       "properties": {
         "logs": [
@@ -290,6 +302,7 @@
         "workspaceId": "[parameters('LogAnalyticsWorkspaceResourceId')]"
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]",
         "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
       ]
     },
@@ -308,9 +321,7 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "PrincipalId": {
-            "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName')), '2022-08-08', 'full').identity.principalId]"
-          },
+          "PrincipalId": "[if(parameters('ExistingAutomationAccount'), createObject('value', reference(resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName')), '2022-08-08', 'full').identity.principalId), createObject('value', reference(resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName')), '2022-08-08', 'full').identity.principalId))]",
           "RoleDefinitionId": {
             "value": "[resourceId('Microsoft.Authorization/roleDefinitions', '40c5ff49-9181-41f8-ae61-143b0e78555e')]"
           }
@@ -348,6 +359,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]",
         "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
       ]
     }

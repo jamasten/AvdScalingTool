@@ -26,6 +26,14 @@
                     "label": "Scaling",
                     "elements": [
                         {
+                            "name": "existingAutomationAccount",
+                            "type": "Microsoft.Common.CheckBox",
+                            "label": "Existing Automation Account",
+                            "constraints": {
+                                "required": false
+                            }
+                        },
+                        {
                             "name": "automationAccountName",
                             "type": "Microsoft.Common.TextBox",
                             "label": "Automation Account Name",
@@ -37,7 +45,20 @@
                                 "regex": "^[a-zA-Z][a-zA-Z0-9-]{4,48}[a-zA-Z0-9]$",
                                 "validationMessage": "The value must be between 6 and 50 characters with alphanumerics and hyphens, start with a letter, and end with an alphanumeric."
                             },
-                            "visible": true
+                            "visible": "[equals(steps('scaling').existingAutomationAccount, false)]"
+                        },
+                        {
+                            "name": "existingAutomationAccountSelector",
+                            "type": "Microsoft.Solutions.ResourceSelector",
+                            "label": "Automation Account",
+                            "resourceType": "Microsoft.Automation/automationAccounts",
+                            "options": {
+                                "filter": {
+                                    "subscription": "onBasics",
+                                    "location": "onBasics"
+                                }
+                            },
+                            "visible": "[steps('scaling').existingAutomationAccount]"
                         },
                         {
                             "name": "scope",
@@ -258,9 +279,10 @@
         },
         "outputs": {
             "parameters": {
-                "AutomationAccountName": "[steps('scaling').automationAccountName]",
+                "AutomationAccountName": "[if(steps('scaling').existingAutomationAccount, steps('scaling').existingAutomationAccountSelector.name, steps('scaling').automationAccountName)]",
                 "BeginPeakTime": "[steps('scaling').options.beginPeakTime]",
                 "EndPeakTime": "[steps('scaling').options.endPeakTime]",
+                "ExistingAutomationAccount": "[steps('scaling').existingAutomationAccount]",
                 "HostPoolName": "[steps('scaling').scope.hostPool.name]",
                 "HostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
                 "LimitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
