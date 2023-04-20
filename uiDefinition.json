@@ -262,7 +262,7 @@
                 "HostPoolName": "[steps('scaling').scope.hostPool.name]",
                 "HostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
                 "LimitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
-                "LogAnalyticsWorkspaceResourceId": "[if(steps('basics').enableMonitoringAlerting, steps('monitoring').logAnalyticsWorkspace.id, '')]",
+                "LogAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoringAlerting, steps('monitoring').logAnalyticsWorkspace.id, '')]",
                 "MinimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
                 "SessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
                 "SessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
