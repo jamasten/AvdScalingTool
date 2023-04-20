@@ -78,44 +78,44 @@
                             ]
                         },
                         {
-                            "name": "beginPeakTime",
-                            "type": "Microsoft.Common.TextBox",
-                            "label": "Begin Peak Time",
-                            "defaultValue": "8:00",
-                            "placeholder": "",
-                            "toolTip": "Input the time when peak hours begin for your end users.",
-                            "constraints": {
-                                "required": true,
-                                "validations": [
-                                    {
-                                        "regex": "^[012]?[0-9]:[0-5][0-9]$",
-                                        "message": "The value must be in a proper time format with a two digit hour and two digit minutes, e.g. 12am should be input as 00:00."
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            "name": "endPeakTime",
-                            "type": "Microsoft.Common.TextBox",
-                            "label": "End Peak Time",
-                            "defaultValue": "17:00",
-                            "placeholder": "",
-                            "toolTip": "Input the time when peak hours end for your end users.",
-                            "constraints": {
-                                "required": true,
-                                "validations": [
-                                    {
-                                        "regex": "^[012]?[0-9]:[0-5][0-9]$",
-                                        "message": "The value must be in a proper time format with a two digit hour and two digit minutes, e.g. 8pm should be input as 20:00."
-                                    }
-                                ]
-                            }
-                        },
-                        {
                             "name": "options",
                             "type": "Microsoft.Common.Section",
                             "label": "Options",
                             "elements": [
+                                {
+                                    "name": "beginPeakTime",
+                                    "type": "Microsoft.Common.TextBox",
+                                    "label": "Begin Peak Time",
+                                    "defaultValue": "8:00",
+                                    "placeholder": "",
+                                    "toolTip": "Input the time when peak hours begin for your end users.",
+                                    "constraints": {
+                                        "required": true,
+                                        "validations": [
+                                            {
+                                                "regex": "^[012]?[0-9]:[0-5][0-9]$",
+                                                "message": "The value must be in a proper time format with a two digit hour and two digit minutes, e.g. 12am should be input as 00:00."
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "name": "endPeakTime",
+                                    "type": "Microsoft.Common.TextBox",
+                                    "label": "End Peak Time",
+                                    "defaultValue": "17:00",
+                                    "placeholder": "",
+                                    "toolTip": "Input the time when peak hours end for your end users.",
+                                    "constraints": {
+                                        "required": true,
+                                        "validations": [
+                                            {
+                                                "regex": "^[012]?[0-9]:[0-5][0-9]$",
+                                                "message": "The value must be in a proper time format with a two digit hour and two digit minutes, e.g. 8pm should be input as 20:00."
+                                            }
+                                        ]
+                                    }
+                                },
                                 {
                                     "name": "forceLogOff",
                                     "type": "Microsoft.Common.TextBox",
@@ -259,8 +259,8 @@
         "outputs": {
             "parameters": {
                 "AutomationAccountName": "[steps('scaling').automationAccountName]",
-                "BeginPeakTime": "[steps('scaling').beginPeakTime]",
-                "EndPeakTime": "[steps('scaling').endPeakTime]",
+                "BeginPeakTime": "[steps('scaling').options.beginPeakTime]",
+                "EndPeakTime": "[steps('scaling').options.endPeakTime]",
                 "HostPoolName": "[steps('scaling').scope.hostPool.name]",
                 "HostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
                 "LimitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
