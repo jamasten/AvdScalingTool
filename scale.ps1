@@ -1,86 +1,48 @@
 ﻿[CmdletBinding(SupportsShouldProcess)]
-param (
-	[Parameter(mandatory = $false)]
-	$WebHookData,
+param(
+	[Parameter(Mandatory)]
+	[string]$BeginPeakTime,
 
-	# Note: optional for simulating user sessions
-	[System.Nullable[int]]$OverrideNUserSessions
+	[Parameter(Mandatory)]
+	[string]$EndPeakTime,
+
+	[Parameter(Mandatory)]
+	[string]$EnvironmentName,
+
+	[Parameter(Mandatory)]
+	[string]$HostPoolName,
+
+	[Parameter(Mandatory)]
+	[int]$LimitSecondsToForceLogOffUser,
+
+	[Parameter(Mandatory)]
+	[string]$LogOffMessageBody,
+
+	[Parameter(Mandatory)]
+	[string]$LogOffMessageTitle,
+
+	[Parameter(Mandatory)]
+	[string]$MaintenanceTagName,
+
+	[Parameter(Mandatory)]
+	[int]$MinimumNumberOfRDSH,
+
+	[Parameter(Mandatory)]
+	[string]$ResourceGroupName,
+
+	[Parameter(Mandatory)]
+	[double]$SessionThresholdPerCPU,
+
+	[Parameter(Mandatory)]
+	[string]$TimeDifference
 )
 
 try
-{	
-	[version]$Version = '0.1.38'
-	$ErrorActionPreference = 'Stop'
-	# Note: this is to force cast in case it's not of the desired type. Specifying this type inside before the param inside param () doesn't work because it still accepts other types and doesn't cast it to this type
-	$WebHookData = [PSCustomObject]$WebHookData
-
-	function Get-PSObjectPropVal
-    {
-		param (
-			$Obj,
-			[string]$Key,
-			$Default = $null
-		)
-		$Prop = $Obj.PSObject.Properties[$Key]
-		if ($Prop) {
-			return $Prop.Value
-		}
-		return $Default
-	}
-
-	# If runbook was called from Webhook, WebhookData and its RequestBody will not be null
-	if (!$WebHookData -or [string]::IsNullOrWhiteSpace((Get-PSObjectPropVal -Obj $WebHookData -Key 'RequestBody')))
-    {
-		throw 'Runbook was not started from Webhook (WebHookData or its RequestBody is empty)'
-	}
-
-	# Collect Input converted from JSON request body of Webhook
-	$RqtParams = ConvertFrom-Json -InputObject $WebHookData.RequestBody
-
-	if (!$RqtParams)
-    {
-		throw 'RequestBody of WebHookData is empty'
-	}
-
-    [string[]]$RequiredStrParams = @(
-        'ResourceGroupName'
-        'HostPoolName'
-        'TimeDifference'
-        'BeginPeakTime'
-        'EndPeakTime'
-    )
-
-	if (Get-PSObjectPropVal -Obj $RqtParams -Key 'LimitSecondsToForceLogOffUser')
-    {
-		$RequiredStrParams += @('LogOffMessageTitle', 'LogOffMessageBody')
-	}
-	
-	[string[]]$RequiredParams = @('SessionThresholdPerCPU', 'MinimumNumberOfRDSH', 'LimitSecondsToForceLogOffUser')
-	[string[]]$InvalidParams = @($RequiredStrParams | Where-Object { [string]::IsNullOrWhiteSpace((Get-PSObjectPropVal -Obj $RqtParams -Key $_)) })
-	[string[]]$InvalidParams += @($RequiredParams | Where-Object { $null -eq (Get-PSObjectPropVal -Obj $RqtParams -Key $_) })
-
-	if ($InvalidParams)
-    {
-		throw "Invalid values for the following $($InvalidParams.Count) params: $($InvalidParams -join ', ')"
-	}
-	
-	[string]$EnvironmentName = Get-PSObjectPropVal -Obj $RqtParams -Key 'EnvironmentName'
-	[string]$ResourceGroupName = $RqtParams.ResourceGroupName
-	[string]$HostPoolName = $RqtParams.HostPoolName
-	[string]$MaintenanceTagName = Get-PSObjectPropVal -Obj $RqtParams -Key 'MaintenanceTagName'
-	[string]$TimeDifference = $RqtParams.TimeDifference
-	[string]$BeginPeakTime = $RqtParams.BeginPeakTime
-	[string]$EndPeakTime = $RqtParams.EndPeakTime
-	[double]$UserSessionThresholdPerCore = $RqtParams.SessionThresholdPerCPU
-	[int]$MinRunningVMs = $RqtParams.MinimumNumberOfRDSH
-	[int]$LimitSecondsToForceLogOffUser = $RqtParams.LimitSecondsToForceLogOffUser
-	[string]$LogOffMessageTitle = Get-PSObjectPropVal -Obj $RqtParams -Key 'LogOffMessageTitle'
-	[string]$LogOffMessageBody = Get-PSObjectPropVal -Obj $RqtParams -Key 'LogOffMessageBody'
-	[int]$StatusCheckTimeOut = Get-PSObjectPropVal -Obj $RqtParams -Key 'StatusCheckTimeOut' -Default (60 * 60) # 1 hr
+{
+	[int]$StatusCheckTimeOut = (60 * 60) # 1 hr
 	[string[]]$DesiredRunningStates = @('Available', 'NeedsAssistance')
-	# Note: time diff can be '#' or '#:#', so it is appended with ':0' in case its just '#' and so the result will have at least 2 items (hrs and min)
 	[string[]]$TimeDiffHrsMin = "$($TimeDifference):0".Split(':')
-	#endregion
+
 
 	#region helper/common functions, set exec policies, set TLS 1.2 security protocol, log rqt params
 	# Function to return local time converted from UTC
@@ -148,17 +110,17 @@ try
 
 		# check if need to adjust min num of running session hosts required if the number of user sessions is close to the max allowed by the min num of running session hosts required
 		[double]$MaxUserSessionsThreshold = 0.9
-		[int]$MaxUserSessionsThresholdCapacity = [math]::Floor($MinRunningVMs * $MaxUserSessionsPerVM * $MaxUserSessionsThreshold)
+		[int]$MaxUserSessionsThresholdCapacity = [math]::Floor($MinimumNumberOfRDSH * $MaxUserSessionsPerVM * $MaxUserSessionsThreshold)
 		if ($nUserSessions -gt $MaxUserSessionsThresholdCapacity)
         {
-			$MinRunningVMs = [math]::Ceiling($nUserSessions / ($MaxUserSessionsPerVM * $MaxUserSessionsThreshold))
-			Write-Log -HostPoolName $HostPoolName -Message "Number of user sessions is more than $($MaxUserSessionsThreshold * 100) % of the max number of sessions allowed with minimum number of running session hosts required ($MaxUserSessionsThresholdCapacity). Adjusted minimum number of running session hosts required to $MinRunningVMs"
+			$MinimumNumberOfRDSH = [math]::Ceiling($nUserSessions / ($MaxUserSessionsPerVM * $MaxUserSessionsThreshold))
+			Write-Log -HostPoolName $HostPoolName -Message "Number of user sessions is more than $($MaxUserSessionsThreshold * 100) % of the max number of sessions allowed with minimum number of running session hosts required ($MaxUserSessionsThresholdCapacity). Adjusted minimum number of running session hosts required to $MinimumNumberOfRDSH"
 		}
 
 		# Check if minimum number of session hosts are running
-		if ($nRunningVMs -lt $MinRunningVMs)
+		if ($nRunningVMs -lt $MinimumNumberOfRDSH)
         {
-			$res.nVMsToStart = $MinRunningVMs - $nRunningVMs
+			$res.nVMsToStart = $MinimumNumberOfRDSH - $nRunningVMs
 			Write-Log -HostPoolName $HostPoolName -Message "Number of running session host is less than minimum required. Need to start $($res.nVMsToStart) VMs"
 		}
 		
@@ -166,19 +128,19 @@ try
         {
 			[double]$nUserSessionsPerCore = $nUserSessions / $nRunningCores
 			# In peak hours: check if current capacity is meeting the user demands
-			if ($nUserSessionsPerCore -gt $UserSessionThresholdPerCore)
+			if ($nUserSessionsPerCore -gt $SessionThresholdPerCPU)
             {
-				$res.nCoresToStart = [math]::Ceiling(($nUserSessions / $UserSessionThresholdPerCore) - $nRunningCores)
+				$res.nCoresToStart = [math]::Ceiling(($nUserSessions / $SessionThresholdPerCPU) - $nRunningCores)
 				Write-Log -HostPoolName $HostPoolName -Message "[In peak hours] Number of user sessions per Core is more than the threshold. Need to start $($res.nCoresToStart) cores"
 			}
 
 			return
 		}
 
-		if ($nRunningVMs -gt $MinRunningVMs)
+		if ($nRunningVMs -gt $MinimumNumberOfRDSH)
         {
 			# Calculate the number of session hosts to stop
-			$res.nVMsToStop = $nRunningVMs - $MinRunningVMs
+			$res.nVMsToStop = $nRunningVMs - $MinimumNumberOfRDSH
 			Write-Log -HostPoolName $HostPoolName -Message "[Off peak hours] Number of running session host is greater than minimum required. Need to stop $($res.nVMsToStop) VMs"
 		}
 	}
@@ -573,11 +535,11 @@ try
 
 	Write-Log -HostPoolName $HostPoolName -Message "Number of running session hosts: $nRunningVMs of total $($VMs.Count)"
 	Write-Log -HostPoolName $HostPoolName -Message "Number of user sessions: $nUserSessions of total allowed $($nRunningVMs * $HostPool.MaxSessionLimit)"
-	Write-Log -HostPoolName $HostPoolName -Message "Number of user sessions per Core: $($nUserSessions / $nRunningCores), threshold: $UserSessionThresholdPerCore"
-	Write-Log -HostPoolName $HostPoolName -Message "Minimum number of running session hosts required: $MinRunningVMs"
+	Write-Log -HostPoolName $HostPoolName -Message "Number of user sessions per Core: $($nUserSessions / $nRunningCores), threshold: $SessionThresholdPerCPU"
+	Write-Log -HostPoolName $HostPoolName -Message "Minimum number of running session hosts required: $MinimumNumberOfRDSH"
 
 	# Check if minimum num of running session hosts required is higher than max allowed
-	if ($VMs.Count -le $MinRunningVMs)
+	if ($VMs.Count -le $MinimumNumberOfRDSH)
     {
 		Write-Log -HostPoolName $HostPoolName -Warn -Message 'Minimum number of RDSH is set higher than or equal to total number of session hosts'
 	}
