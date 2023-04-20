@@ -18,14 +18,6 @@
                                     "Microsoft.Insights/diagnosticsettings"
                                 ]
                             }
-                        },
-                        {
-                            "name": "enableMonitoringAlerting",
-                            "type": "Microsoft.Common.CheckBox",
-                            "label": "Enable Monitoring & Alerting",
-                            "constraints": {
-                                "required": false
-                            }
                         }
                     ]
                 },
@@ -87,127 +79,35 @@
                         },
                         {
                             "name": "beginPeakTime",
-                            "type": "Microsoft.Common.Section",
-                            "label": "Begin Peak Time",
-                            "elements": [
-                                {
-                                    "name": "time",
-                                    "type": "Microsoft.Common.EditableGrid",
-                                    "ariaLabel": "Begin Peak Time",
-                                    "label": "Begin Peak Time",
-                                    "constraints": {
-                                        "width": "Small",
-                                        "rows": {
-                                            "count": {
-                                                "min": 1,
-                                                "max": 1
-                                            }
-                                        },
-                                        "columns": [
-                                            {
-                                                "id": "hour",
-                                                "header": "Hour",
-                                                "width": "1fr",
-                                                "element": {
-                                                    "type": "Microsoft.Common.TextBox",
-                                                    "defaultValue": "8",
-                                                    "placeholder": "",
-                                                    "constraints": {
-                                                        "required": true,
-                                                        "validations": [
-                                                            {
-                                                                "regex": "^[0-9]{1,2}$",
-                                                                "message": "The value must be between 1 and 2 digits."
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            },
-                                            {
-                                                "id": "minutes",
-                                                "header": "Minutes",
-                                                "width": "1fr",
-                                                "element": {
-                                                    "type": "Microsoft.Common.TextBox",
-                                                    "defaultValue": "00",
-                                                    "placeholder": "",
-                                                    "constraints": {
-                                                        "required": true,
-                                                        "validations": [
-                                                            {
-                                                                "regex": "^[0-9]{2}$",
-                                                                "message": "The value must be 2 digits."
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        ]
+                            "type": "Microsoft.Common.TextBox",
+                            "defaultValue": "8:00",
+                            "placeholder": "",
+                            "toolTip": "Input the time when peak hours begin for your end users.",
+                            "constraints": {
+                                "required": true,
+                                "validations": [
+                                    {
+                                        "regex": "^[012]?[0-9]:[0-5][0-9]$",
+                                        "message": "The value must be in a proper time format with a two digit hour and two digit minutes, e.g. 12am should be input as 00:00."
                                     }
-                                }
-                            ]
+                                ]
+                            }
                         },
                         {
                             "name": "endPeakTime",
-                            "type": "Microsoft.Common.Section",
-                            "label": "End Peak Time",
-                            "elements": [
-                                {
-                                    "name": "time",
-                                    "type": "Microsoft.Common.EditableGrid",
-                                    "ariaLabel": "End Peak Time",
-                                    "label": "End Peak Time",
-                                    "constraints": {
-                                        "width": "Small",
-                                        "rows": {
-                                            "count": {
-                                                "min": 1,
-                                                "max": 1
-                                            }
-                                        },
-                                        "columns": [
-                                            {
-                                                "id": "hour",
-                                                "header": "Hour",
-                                                "width": "1fr",
-                                                "element": {
-                                                    "type": "Microsoft.Common.TextBox",
-                                                    "defaultValue": "17",
-                                                    "placeholder": "",
-                                                    "constraints": {
-                                                        "required": true,
-                                                        "validations": [
-                                                            {
-                                                                "regex": "^[0-9]{1,2}$",
-                                                                "message": "The value must be between 1 and 2 digits."
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            },
-                                            {
-                                                "id": "minutes",
-                                                "header": "Minutes",
-                                                "width": "1fr",
-                                                "element": {
-                                                    "type": "Microsoft.Common.TextBox",
-                                                    "defaultValue": "00",
-                                                    "placeholder": "",
-                                                    "constraints": {
-                                                        "required": true,
-                                                        "validations": [
-                                                            {
-                                                                "regex": "^[0-9]{2}$",
-                                                                "message": "The value must be 2 digits."
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        ]
+                            "type": "Microsoft.Common.TextBox",
+                            "defaultValue": "17:00",
+                            "placeholder": "",
+                            "toolTip": "Input the time when peak hours end for your end users.",
+                            "constraints": {
+                                "required": true,
+                                "validations": [
+                                    {
+                                        "regex": "^[012]?[0-9]:[0-5][0-9]$",
+                                        "message": "The value must be in a proper time format with a two digit hour and two digit minutes, e.g. 8pm should be input as 20:00."
                                     }
-                                }
-                            ]
+                                ]
+                            }
                         },
                         {
                             "name": "options",
@@ -279,12 +179,19 @@
                 {
                     "name": "monitoring",
                     "label": "Monitoring",
-                    "visible": "[equals(steps('basics').enableMonitoringAlerting, true)]",
                     "elements": [
+                        {
+                            "name": "enableMonitoringAlerting",
+                            "type": "Microsoft.Common.CheckBox",
+                            "label": "Enable Monitoring & Alerting",
+                            "constraints": {
+                                "required": false
+                            }
+                        },
                         {
                             "name": "logAnalyticsWorkspace",
                             "type": "Microsoft.Solutions.ResourceSelector",
-                            "visible": "[steps('basics').monitoring.enable]",
+                            "visible": "[steps('monitoring').enableMonitoringAlerting]",
                             "label": "Log Analytics Workspace",
                             "resourceType": "Microsoft.OperationalInsights/workspaces",
                             "constraints": {
@@ -292,7 +199,8 @@
                             },
                             "options": {}
                         }
-                    ]
+                    ],
+                    "visible": true
                 },
                 {
                     "name": "tags",
@@ -341,15 +249,16 @@
                                 ]
                             }
                         }
-                    ]
+                    ],
+                    "visible": true
                 }
             ]
         },
         "outputs": {
             "parameters": {
                 "AutomationAccountName": "[steps('scaling').automationAccountName]",
-                "BeginPeakTime": "[concat(steps('scaling').beginPeakTime.time.hour, ':', steps('scaling').beginPeakTime.time.minutes)]",
-                "EndPeakTime": "[concat(steps('scaling').endPeakTime.time.hour, ':', steps('scaling').endPeakTime.time.minutes)]",
+                "BeginPeakTime": "[steps('scaling').beginPeakTime]",
+                "EndPeakTime": "[steps('scaling').endPeakTime]",
                 "HostPoolName": "[steps('scaling').scope.hostPool.name]",
                 "HostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
                 "LimitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
