@@ -1,12 +1,12 @@
-param AutomationAccountId string
+param PrincipalId string
+param RoleDefinitionId string
 
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, 'ScalingContributor')
+  name: guid(PrincipalId, RoleDefinitionId, resourceGroup().id) // who what where
   properties: {
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor
-    principalId: AutomationAccountId
+    roleDefinitionId: RoleDefinitionId
+    principalId: PrincipalId
     principalType: 'ServicePrincipal'
   }
-  dependsOn: []
 }
