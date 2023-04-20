@@ -215,9 +215,9 @@
                     "label": "Monitoring",
                     "elements": [
                         {
-                            "name": "enableMonitoringAlerting",
+                            "name": "enableMonitoring",
                             "type": "Microsoft.Common.CheckBox",
-                            "label": "Enable Monitoring & Alerting",
+                            "label": "Enable Monitoring",
                             "constraints": {
                                 "required": false
                             }
@@ -225,7 +225,7 @@
                         {
                             "name": "logAnalyticsWorkspace",
                             "type": "Microsoft.Solutions.ResourceSelector",
-                            "visible": "[steps('monitoring').enableMonitoringAlerting]",
+                            "visible": "[steps('monitoring').enableMonitoring]",
                             "label": "Log Analytics Workspace",
                             "resourceType": "Microsoft.OperationalInsights/workspaces",
                             "constraints": {
@@ -297,7 +297,7 @@
                 "HostPoolName": "[steps('scaling').scope.hostPool.name]",
                 "HostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
                 "LimitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
-                "LogAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoringAlerting, steps('monitoring').logAnalyticsWorkspace.id, '')]",
+                "LogAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').logAnalyticsWorkspace.id, '')]",
                 "MinimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
                 "SessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
                 "SessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
