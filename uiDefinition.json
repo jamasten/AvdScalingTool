@@ -301,7 +301,7 @@
                         {
                             "name": "customTags",
                             "type": "Microsoft.Common.EditableGrid",
-                            "ariaLabel": "",
+                            "ariaLabel": "Resource Tags",
                             "label": "Resource Tags",
                             "constraints": {
                                 "width": "Full",
