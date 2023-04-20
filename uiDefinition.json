@@ -80,6 +80,7 @@
                         {
                             "name": "beginPeakTime",
                             "type": "Microsoft.Common.TextBox",
+                            "label": "Begin Peak Time",
                             "defaultValue": "8:00",
                             "placeholder": "",
                             "toolTip": "Input the time when peak hours begin for your end users.",
@@ -96,6 +97,7 @@
                         {
                             "name": "endPeakTime",
                             "type": "Microsoft.Common.TextBox",
+                            "label": "End Peak Time",
                             "defaultValue": "17:00",
                             "placeholder": "",
                             "toolTip": "Input the time when peak hours end for your end users.",
