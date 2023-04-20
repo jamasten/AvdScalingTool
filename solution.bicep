@@ -151,13 +151,13 @@ resource automationAccount 'Microsoft.Automation/automationAccounts@2022-08-08' 
   }
 }
 
-resource automationAccount_existing 'Microsoft.Automation/automationAccounts@2022-08-08' = if(ExistingAutomationAccount) {
-  name: AutomationAccountName
+resource automationAccount_existing 'Microsoft.Automation/automationAccounts@2022-08-08' = {
+  name: automationAccount.name
 }
 
 resource runbook 'Microsoft.Automation/automationAccounts/runbooks@2022-08-08' = {
-  #disable-next-line use-parent-property // Conditional parent is not allowed
-  name: '${AutomationAccountName}/${RunbookName}'
+  parent: automationAccount_existing
+  name: RunbookName
   location: Location
   tags: Tags
   properties: {
@@ -169,15 +169,11 @@ resource runbook 'Microsoft.Automation/automationAccounts/runbooks@2022-08-08' =
       version: '1.0.0.0'
     }
   }
-  dependsOn: [
-    automationAccount
-    automationAccount_existing
-  ]
 }
 
 resource schedules 'Microsoft.Automation/automationAccounts/schedules@2022-08-08' = [for i in range(0, 4): {
-  #disable-next-line use-parent-property // Conditional parent is not allowed
-  name: '${AutomationAccountName}/${HostPoolName}_${(i+1)*15}min'
+  parent: automationAccount_existing
+  name: '${HostPoolName}_${(i+1)*15}min'
   properties: {
     advancedSchedule: {}
     description: null
@@ -187,15 +183,12 @@ resource schedules 'Microsoft.Automation/automationAccounts/schedules@2022-08-08
     startTime: dateTimeAdd(Timestamp, 'PT${(i+1)*15}M')
     timeZone: TimeZones[Location]
   }
-  dependsOn: [
-    automationAccount
-    automationAccount_existing
-  ]
 }]
 
 resource jobSchedules 'Microsoft.Automation/automationAccounts/jobSchedules@2022-08-08' = [for i in range(0, 4): {
-  #disable-next-line use-stable-resource-identifiers use-parent-property // Conditional parent is not allowed
-  name: '${AutomationAccountName}/${guid(Timestamp, RunbookName, HostPoolName, string(i))}'
+  parent: automationAccount_existing
+  #disable-next-line use-stable-resource-identifiers
+  name: guid(Timestamp, RunbookName, HostPoolName, string(i))
   properties: {
     parameters: {
       TenantId: subscription().tenantId
@@ -221,14 +214,10 @@ resource jobSchedules 'Microsoft.Automation/automationAccounts/jobSchedules@2022
       name: schedules[i].name
     }
   }
-  dependsOn: [
-    automationAccount
-    automationAccount_existing
-  ]
 }]
 
 resource diagnostics 'Microsoft.Insights/diagnosticsettings@2017-05-01-preview' = if (!empty(LogAnalyticsWorkspaceResourceId)) {
-  scope: ExistingAutomationAccount ? automationAccount_existing : automationAccount
+  scope: automationAccount_existing
   name: 'diag-${AutomationAccountName}'
   properties: {
     logs: [
@@ -250,7 +239,7 @@ module roleAssignments'modules/roleAssignments.bicep' = [for i in range(0, lengt
   name: 'RoleAssignment_${RoleAssignments[i]}'
   scope: resourceGroup(RoleAssignments[i])
   params: {
-    PrincipalId: ExistingAutomationAccount ? automationAccount_existing.identity.principalId : automationAccount.identity.principalId
+    PrincipalId: automationAccount_existing.identity.principalId
     RoleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '40c5ff49-9181-41f8-ae61-143b0e78555e') // Desktop Virtualization Power On Off Contributor
   }
 }]
