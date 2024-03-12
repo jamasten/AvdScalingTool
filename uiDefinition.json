@@ -26,6 +26,44 @@
                     "label": "Scaling",
                     "elements": [
                         {
+                            "name": "scriptUri",
+                            "type": "Microsoft.Common.TextBox",
+                            "label": "Script URI",
+                            "defaultValue": "https://raw.githubusercontent.com/jamasten/AvdScalingTool/main/scale.ps1",
+                            "toolTip": "Input the URI for the PowerShell script to scale the AVD host pool.",
+                            "placeholder": "",
+                            "multiLine": false,
+                            "constraints": {
+                                "required": true,
+                                "validations": [
+                                    {
+                                        "regex": "^[a-z0-9A-Z\\./:]+$",
+                                        "message": "Must be a valid URI."
+                                    },
+                                    {
+                                        "isValid": "[startsWith(steps('scaling').scriptUri, 'https://')]",
+                                        "message": "Must start with 'https://'."
+                                    }
+                                ]
+                            },
+                            "visible": true
+                        },
+                        {
+                            "name": "scriptSasToken",
+                            "type": "Microsoft.Common.PasswordBox",
+                            "label": {
+                                "password": "SAS Token"
+                            },
+                            "toolTip": "(Optional) Input the SAS token for the PowerShell script to scale the AVD host pool if hosting the file in Azure Blobs.",
+                            "constraints": {
+                                "required": false
+                            },
+                            "options": {
+                                "hideConfirmation": true
+                            },
+                            "visible": true
+                        },
+                        {
                             "name": "existingAutomationAccount",
                             "type": "Microsoft.Common.CheckBox",
                             "label": "Existing Automation Account",
@@ -290,18 +328,20 @@
         },
         "outputs": {
             "parameters": {
-                "AutomationAccountName": "[if(steps('scaling').existingAutomationAccount, steps('scaling').existingAutomationAccountDropDown, steps('scaling').automationAccountName)]",
-                "BeginPeakTime": "[steps('scaling').options.beginPeakTime]",
-                "EndPeakTime": "[steps('scaling').options.endPeakTime]",
-                "ExistingAutomationAccount": "[steps('scaling').existingAutomationAccount]",
-                "HostPoolName": "[steps('scaling').scope.hostPool.name]",
-                "HostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
-                "LimitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
-                "LogAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').logAnalyticsWorkspace.id, '')]",
-                "MinimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
-                "SessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
-                "SessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
-                "Tags": "[if(empty(first(steps('tags').customTags).name), parse('{}'), parse(replace(replace(replace(replace(string(map(steps('tags').customTags, (item) => parse(concat('{\"', item.name, '\": \"', item.value, '\"}')))), '{', ''), '}', ''), '[', '{'), ']', '}')))]"
+                "automationAccountName": "[if(steps('scaling').existingAutomationAccount, steps('scaling').existingAutomationAccountDropDown, steps('scaling').automationAccountName)]",
+                "beginPeakTime": "[steps('scaling').options.beginPeakTime]",
+                "endPeakTime": "[steps('scaling').options.endPeakTime]",
+                "existingAutomationAccount": "[steps('scaling').existingAutomationAccount]",
+                "hostPoolName": "[steps('scaling').scope.hostPool.name]",
+                "hostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
+                "limitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
+                "logAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').logAnalyticsWorkspace.id, '')]",
+                "minimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
+                "scriptSasToken": "[steps('scaling').scriptSasToken]",
+                "scriptUri": "[steps('scaling').scriptUri]",
+                "sessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
+                "sessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
+                "tags": "[if(empty(first(steps('tags').customTags).name), parse('{}'), parse(replace(replace(replace(replace(string(map(steps('tags').customTags, (item) => parse(concat('{\"', item.name, '\": \"', item.value, '\"}')))), '{', ''), '}', ''), '[', '{'), ']', '}')))]"
             },
             "kind": "ResourceGroup",
             "location": "[steps('basics').resourceScope.location.name]",
