@@ -4,192 +4,471 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.16.2.56959",
-      "templateHash": "6557039358816449836"
+      "version": "0.25.53.49325",
+      "templateHash": "5228684719472587280"
     }
   },
   "parameters": {
-    "AutomationAccountName": {
+    "automationAccountName": {
       "type": "string"
     },
-    "BeginPeakTime": {
+    "beginPeakTime": {
       "type": "string",
       "defaultValue": "8:00"
     },
-    "EndPeakTime": {
+    "endPeakTime": {
       "type": "string",
       "defaultValue": "17:00"
     },
-    "ExistingAutomationAccount": {
+    "existingAutomationAccount": {
       "type": "bool"
     },
-    "HostPoolName": {
+    "hostPoolName": {
       "type": "string"
     },
-    "HostPoolResourceGroupName": {
+    "hostPoolResourceGroupName": {
       "type": "string"
     },
-    "LimitSecondsToForceLogOffUser": {
+    "limitSecondsToForceLogOffUser": {
       "type": "string",
       "defaultValue": "0"
     },
-    "Location": {
+    "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]"
     },
-    "LogAnalyticsWorkspaceResourceId": {
+    "logAnalyticsWorkspaceResourceId": {
       "type": "string",
       "defaultValue": ""
     },
-    "MinimumNumberOfRdsh": {
+    "minimumNumberOfRdsh": {
       "type": "string",
       "defaultValue": "0"
     },
-    "SessionHostsResourceGroupName": {
+    "scriptSasToken": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "scriptUri": {
+      "type": "string",
+      "defaultValue": "https://raw.githubusercontent.com/jamasten/AvdScalingTool/main/scale.ps1"
+    },
+    "sessionHostsResourceGroupName": {
       "type": "string"
     },
-    "SessionThresholdPerCPU": {
+    "sessionThresholdPerCPU": {
       "type": "string",
       "defaultValue": "1"
     },
-    "Tags": {
+    "tags": {
       "type": "object"
     },
-    "Timestamp": {
+    "timestamp": {
       "type": "string",
       "defaultValue": "[utcNow('yyyyMMddhhmmss')]"
     },
-    "Time": {
+    "time": {
       "type": "string",
       "defaultValue": "[utcNow('u')]"
     }
   },
   "variables": {
-    "RoleAssignments": "[if(equals(parameters('HostPoolResourceGroupName'), parameters('SessionHostsResourceGroupName')), createArray(parameters('HostPoolResourceGroupName')), createArray(parameters('HostPoolResourceGroupName'), parameters('SessionHostsResourceGroupName')))]",
-    "RunbookName": "AvdScalingTool",
-    "TimeDifferences": {
-      "australiacentral": "+10:00",
-      "australiacentral2": "+10:00",
-      "australiaeast": "+10:00",
-      "australiasoutheast": "+10:00",
-      "brazilsouth": "-3:00",
-      "brazilsoutheast": "-3:00",
-      "canadacentral": "-5:00",
-      "canadaeast": "-5:00",
-      "centralindia": "+5:30",
-      "centralus": "-6:00",
-      "chinaeast": "+8:00",
-      "chinaeast2": "+8:00",
-      "chinanorth": "+8:00",
-      "chinanorth2": "+8:00",
-      "eastasia": "+8:00",
-      "eastus": "-5:00",
-      "eastus2": "-5:00",
-      "francecentral": "+1:00",
-      "francesouth": "+1:00",
-      "germanynorth": "+1:00",
-      "germanywestcentral": "+1:00",
-      "japaneast": "+9:00",
-      "japanwest": "+9:00",
-      "jioindiacentral": "+5:30",
-      "jioindiawest": "+5:30",
-      "koreacentral": "+9:00",
-      "koreasouth": "+9:00",
-      "northcentralus": "-6:00",
-      "northeurope": "0:00",
-      "norwayeast": "+1:00",
-      "norwaywest": "+1:00",
-      "southafricanorth": "+2:00",
-      "southafricawest": "+2:00",
-      "southcentralus": "-6:00",
-      "southindia": "+5:30",
-      "southeastasia": "+8:00",
-      "swedencentral": "+1:00",
-      "switzerlandnorth": "+1:00",
-      "switzerlandwest": "+1:00",
-      "uaecentral": "+3:00",
-      "uaenorth": "+3:00",
-      "uksouth": "0:00",
-      "ukwest": "0:00",
-      "usdodcentral": "-6:00",
-      "usdodeast": "-5:00",
-      "usgovarizona": "-7:00",
-      "usgoviowa": "-6:00",
-      "usgovtexas": "-6:00",
-      "usgovvirginia": "-5:00",
-      "westcentralus": "-7:00",
-      "westeurope": "+1:00",
-      "westindia": "+5:30",
-      "westus": "-8:00",
-      "westus2": "-8:00",
-      "westus3": "-7:00"
+    "$fxv#0": {
+      "AzureChina": {
+        "chinaeast": {
+          "abbreviation": "cne",
+          "recoveryServicesGeo": "sha",
+          "timeDifference": "+8:00",
+          "timeZone": "China Standard Time"
+        },
+        "chinaeast2": {
+          "abbreviation": "cne2",
+          "recoveryServicesGeo": "sha2",
+          "timeDifference": "+8:00",
+          "timeZone": "China Standard Time"
+        },
+        "chinanorth": {
+          "abbreviation": "cnn",
+          "recoveryServicesGeo": "bjb",
+          "timeDifference": "+8:00",
+          "timeZone": "China Standard Time"
+        },
+        "chinanorth2": {
+          "abbreviation": "cnn2",
+          "recoveryServicesGeo": "bjb2",
+          "timeDifference": "+8:00",
+          "timeZone": "China Standard Time"
+        }
+      },
+      "AzureCloud": {
+        "australiacentral": {
+          "abbreviation": "auc",
+          "recoveryServicesGeo": "acl",
+          "timeDifference": "+10:00",
+          "timeZone": "AUS Eastern Standard Time"
+        },
+        "australiacentral2": {
+          "abbreviation": "auc2",
+          "recoveryServicesGeo": "acl2",
+          "timeDifference": "+10:00",
+          "timeZone": "AUS Eastern Standard Time"
+        },
+        "australiaeast": {
+          "abbreviation": "aue",
+          "recoveryServicesGeo": "ae",
+          "timeDifference": "+10:00",
+          "timeZone": "AUS Eastern Standard Time"
+        },
+        "australiasoutheast": {
+          "abbreviation": "ause",
+          "recoveryServicesGeo": "ase",
+          "timeDifference": "+10:00",
+          "timeZone": "AUS Eastern Standard Time"
+        },
+        "brazilsouth": {
+          "abbreviation": "brs",
+          "recoveryServicesGeo": "brs",
+          "timeDifference": "-3:00",
+          "timeZone": "E. South America Standard Time"
+        },
+        "brazilsoutheast": {
+          "abbreviation": "brse",
+          "recoveryServicesGeo": "bse",
+          "timeDifference": "-3:00",
+          "timeZone": "E. South America Standard Time"
+        },
+        "canadacentral": {
+          "abbreviation": "cac",
+          "recoveryServicesGeo": "cnc",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        },
+        "canadaeast": {
+          "abbreviation": "cae",
+          "recoveryServicesGeo": "cne",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        },
+        "centralindia": {
+          "abbreviation": "inc",
+          "recoveryServicesGeo": "inc",
+          "timeDifference": "+5:30",
+          "timeZone": "India Standard Time"
+        },
+        "centralus": {
+          "abbreviation": "usc",
+          "recoveryServicesGeo": "cus",
+          "timeDifference": "-6:00",
+          "timeZone": "Central Standard Time"
+        },
+        "eastasia": {
+          "abbreviation": "ase",
+          "recoveryServicesGeo": "ea",
+          "timeDifference": "+8:00",
+          "timeZone": "China Standard Time"
+        },
+        "eastus": {
+          "abbreviation": "use",
+          "recoveryServicesGeo": "eus",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        },
+        "eastus2": {
+          "abbreviation": "use2",
+          "recoveryServicesGeo": "eus2",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        },
+        "francecentral": {
+          "abbreviation": "frc",
+          "recoveryServicesGeo": "frc",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "francesouth": {
+          "abbreviation": "frs",
+          "recoveryServicesGeo": "frs",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "germanynorth": {
+          "abbreviation": "den",
+          "recoveryServicesGeo": "gn",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "germanywestcentral": {
+          "abbreviation": "dewc",
+          "recoveryServicesGeo": "gwc",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "israelcentral": {
+          "abbreviation": "ilc",
+          "recoveryServicesGeo": "ilc",
+          "timeDifference": "+2:00",
+          "timeZone": "Israel Standard Time"
+        },
+        "italynorth": {
+          "abbreviation": "itn",
+          "recoveryServicesGeo": "itn",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "japaneast": {
+          "abbreviation": "jpe",
+          "recoveryServicesGeo": "jpe",
+          "timeDifference": "+9:00",
+          "timeZone": "Tokyo Standard Time"
+        },
+        "japanwest": {
+          "abbreviation": "jpw",
+          "recoveryServicesGeo": "jpw",
+          "timeDifference": "+9:00",
+          "timeZone": "Tokyo Standard Time"
+        },
+        "jioindiacentral": {
+          "abbreviation": "injc",
+          "recoveryServicesGeo": "jic",
+          "timeDifference": "+5:30",
+          "timeZone": "India Standard Time"
+        },
+        "jioindiawest": {
+          "abbreviation": "injw",
+          "recoveryServicesGeo": "jiw",
+          "timeDifference": "+5:30",
+          "timeZone": "India Standard Time"
+        },
+        "koreacentral": {
+          "abbreviation": "krc",
+          "recoveryServicesGeo": "krc",
+          "timeDifference": "+9:00",
+          "timeZone": "Korea Standard Time"
+        },
+        "koreasouth": {
+          "abbreviation": "krs",
+          "recoveryServicesGeo": "krs",
+          "timeDifference": "+9:00",
+          "timeZone": "Korea Standard Time"
+        },
+        "northcentralus": {
+          "abbreviation": "usnc",
+          "recoveryServicesGeo": "ncus",
+          "timeDifference": "-6:00",
+          "timeZone": "Central Standard Time"
+        },
+        "northeurope": {
+          "abbreviation": "eun",
+          "recoveryServicesGeo": "ne",
+          "timeDifference": "0:00",
+          "timeZone": "GMT Standard Time"
+        },
+        "norwayeast": {
+          "abbreviation": "noe",
+          "recoveryServicesGeo": "nwe",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "norwaywest": {
+          "abbreviation": "now",
+          "recoveryServicesGeo": "nww",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "polandcentral": {
+          "abbreviation": "plc",
+          "recoveryServicesGeo": "plc",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "qatarcentral": {
+          "abbreviation": "qac",
+          "recoveryServicesGeo": "qac",
+          "timeDifference": "+3:00",
+          "timeZone": "Arabian Standard Time"
+        },
+        "southafricanorth": {
+          "abbreviation": "zan",
+          "recoveryServicesGeo": "san",
+          "timeDifference": "+2:00",
+          "timeZone": "South Africa Standard Time"
+        },
+        "southafricawest": {
+          "abbreviation": "zaw",
+          "recoveryServicesGeo": "saw",
+          "timeDifference": "+2:00",
+          "timeZone": "South Africa Standard Time"
+        },
+        "southcentralus": {
+          "abbreviation": "ussc",
+          "recoveryServicesGeo": "scus",
+          "timeDifference": "-6:00",
+          "timeZone": "Central Standard Time"
+        },
+        "southeastasia": {
+          "abbreviation": "asse",
+          "recoveryServicesGeo": "sea",
+          "timeDifference": "+8:00",
+          "timeZone": "Singapore Standard Time"
+        },
+        "southindia": {
+          "abbreviation": "ins",
+          "recoveryServicesGeo": "ins",
+          "timeDifference": "+5:30",
+          "timeZone": "India Standard Time"
+        },
+        "swedencentral": {
+          "abbreviation": "sec",
+          "recoveryServicesGeo": "sdc",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "switzerlandnorth": {
+          "abbreviation": "chn",
+          "recoveryServicesGeo": "szn",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "switzerlandwest": {
+          "abbreviation": "chw",
+          "recoveryServicesGeo": "szw",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "uaecentral": {
+          "abbreviation": "aec",
+          "recoveryServicesGeo": "uac",
+          "timeDifference": "+3:00",
+          "timeZone": "Arabian Standard Time"
+        },
+        "uaenorth": {
+          "abbreviation": "aen",
+          "recoveryServicesGeo": "uan",
+          "timeDifference": "+3:00",
+          "timeZone": "Arabian Standard Time"
+        },
+        "uksouth": {
+          "abbreviation": "uks",
+          "recoveryServicesGeo": "uks",
+          "timeDifference": "0:00",
+          "timeZone": "GMT Standard Time"
+        },
+        "ukwest": {
+          "abbreviation": "ukw",
+          "recoveryServicesGeo": "ukw",
+          "timeDifference": "0:00",
+          "timeZone": "GMT Standard Time"
+        },
+        "westcentralus": {
+          "abbreviation": "uswc",
+          "recoveryServicesGeo": "wcus",
+          "timeDifference": "-7:00",
+          "timeZone": "Mountain Standard Time"
+        },
+        "westeurope": {
+          "abbreviation": "euw",
+          "recoveryServicesGeo": "we",
+          "timeDifference": "+1:00",
+          "timeZone": "Central Europe Standard Time"
+        },
+        "westindia": {
+          "abbreviation": "inw",
+          "recoveryServicesGeo": "inw",
+          "timeDifference": "+5:30",
+          "timeZone": "India Standard Time"
+        },
+        "westus": {
+          "abbreviation": "usw",
+          "recoveryServicesGeo": "wus",
+          "timeDifference": "-8:00",
+          "timeZone": "Pacific Standard Time"
+        },
+        "westus2": {
+          "abbreviation": "usw2",
+          "recoveryServicesGeo": "wus2",
+          "timeDifference": "-8:00",
+          "timeZone": "Pacific Standard Time"
+        },
+        "westus3": {
+          "abbreviation": "usw3",
+          "recoveryServicesGeo": "wus3",
+          "timeDifference": "-7:00",
+          "timeZone": "Mountain Standard Time"
+        }
+      },
+      "AzureUSGovernment": {
+        "usdodcentral": {
+          "abbreviation": "dodc",
+          "recoveryServicesGeo": "udc",
+          "timeDifference": "-6:00",
+          "timeZone": "Central Standard Time"
+        },
+        "usdodeast": {
+          "abbreviation": "dode",
+          "recoveryServicesGeo": "ude",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        },
+        "usgovarizona": {
+          "abbreviation": "az",
+          "recoveryServicesGeo": "uga",
+          "timeDifference": "-7:00",
+          "timeZone": "Mountain Standard Time"
+        },
+        "usgovtexas": {
+          "abbreviation": "tx",
+          "recoveryServicesGeo": "ugt",
+          "timeDifference": "-6:00",
+          "timeZone": "Central Standard Time"
+        },
+        "usgovvirginia": {
+          "abbreviation": "va",
+          "recoveryServicesGeo": "ugv",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        }
+      },
+      "USNat": {
+        "usnateast": {
+          "abbreviation": "east",
+          "recoveryServicesGeo": "exe",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        },
+        "usnatwest": {
+          "abbreviation": "west",
+          "recoveryServicesGeo": "exw",
+          "timeDifference": "-8:00",
+          "timeZone": "Pacific Standard Time"
+        }
+      },
+      "USSec": {
+        "usseceast": {
+          "abbreviation": "east",
+          "recoveryServicesGeo": "rxe",
+          "timeDifference": "-5:00",
+          "timeZone": "Eastern Standard Time"
+        },
+        "ussecwest": {
+          "abbreviation": "west",
+          "recoveryServicesGeo": "rxw",
+          "timeDifference": "-8:00",
+          "timeZone": "Pacific Standard Time"
+        }
+      }
     },
-    "TimeZones": {
-      "australiacentral": "AUS Eastern Standard Time",
-      "australiacentral2": "AUS Eastern Standard Time",
-      "australiaeast": "AUS Eastern Standard Time",
-      "australiasoutheast": "AUS Eastern Standard Time",
-      "brazilsouth": "E. South America Standard Time",
-      "brazilsoutheast": "E. South America Standard Time",
-      "canadacentral": "Eastern Standard Time",
-      "canadaeast": "Eastern Standard Time",
-      "centralindia": "India Standard Time",
-      "centralus": "Central Standard Time",
-      "chinaeast": "China Standard Time",
-      "chinaeast2": "China Standard Time",
-      "chinanorth": "China Standard Time",
-      "chinanorth2": "China Standard Time",
-      "eastasia": "China Standard Time",
-      "eastus": "Eastern Standard Time",
-      "eastus2": "Eastern Standard Time",
-      "francecentral": "Central Europe Standard Time",
-      "francesouth": "Central Europe Standard Time",
-      "germanynorth": "Central Europe Standard Time",
-      "germanywestcentral": "Central Europe Standard Time",
-      "japaneast": "Tokyo Standard Time",
-      "japanwest": "Tokyo Standard Time",
-      "jioindiacentral": "India Standard Time",
-      "jioindiawest": "India Standard Time",
-      "koreacentral": "Korea Standard Time",
-      "koreasouth": "Korea Standard Time",
-      "northcentralus": "Central Standard Time",
-      "northeurope": "GMT Standard Time",
-      "norwayeast": "Central Europe Standard Time",
-      "norwaywest": "Central Europe Standard Time",
-      "southafricanorth": "South Africa Standard Time",
-      "southafricawest": "South Africa Standard Time",
-      "southcentralus": "Central Standard Time",
-      "southindia": "India Standard Time",
-      "southeastasia": "Singapore Standard Time",
-      "swedencentral": "Central Europe Standard Time",
-      "switzerlandnorth": "Central Europe Standard Time",
-      "switzerlandwest": "Central Europe Standard Time",
-      "uaecentral": "Arabian Standard Time",
-      "uaenorth": "Arabian Standard Time",
-      "uksouth": "GMT Standard Time",
-      "ukwest": "GMT Standard Time",
-      "usdodcentral": "Central Standard Time",
-      "usdodeast": "Eastern Standard Time",
-      "usgovarizona": "Mountain Standard Time",
-      "usgoviowa": "Central Standard Time",
-      "usgovtexas": "Central Standard Time",
-      "usgovvirginia": "Eastern Standard Time",
-      "westcentralus": "Mountain Standard Time",
-      "westeurope": "Central Europe Standard Time",
-      "westindia": "India Standard Time",
-      "westus": "Pacific Standard Time",
-      "westus2": "Pacific Standard Time",
-      "westus3": "Mountain Standard Time"
-    }
+    "locations": "[variables('$fxv#0')[environment().name]]",
+    "roleAssignments": "[if(equals(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')), createArray(parameters('hostPoolResourceGroupName')), createArray(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')))]",
+    "runbookName": "AvdScalingTool"
   },
   "resources": [
     {
-      "condition": "[not(parameters('ExistingAutomationAccount'))]",
+      "condition": "[not(parameters('existingAutomationAccount'))]",
       "type": "Microsoft.Automation/automationAccounts",
       "apiVersion": "2022-08-08",
-      "name": "[parameters('AutomationAccountName')]",
-      "location": "[parameters('Location')]",
-      "tags": "[parameters('Tags')]",
+      "name": "[parameters('automationAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
       "identity": {
         "type": "SystemAssigned"
       },
@@ -202,20 +481,20 @@
     {
       "type": "Microsoft.Automation/automationAccounts/runbooks",
       "apiVersion": "2022-08-08",
-      "name": "[format('{0}/{1}', parameters('AutomationAccountName'), variables('RunbookName'))]",
-      "location": "[parameters('Location')]",
-      "tags": "[parameters('Tags')]",
+      "name": "[format('{0}/{1}', parameters('automationAccountName'), variables('runbookName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
       "properties": {
         "runbookType": "PowerShell",
         "logProgress": false,
         "logVerbose": false,
         "publishContentLink": {
-          "uri": "https://raw.githubusercontent.com/jamasten/AvdScalingTool/main/scale.ps1",
+          "uri": "[format('{0}{1}', parameters('scriptUri'), if(equals(first(parameters('scriptSasToken')), '?'), parameters('scriptSasToken'), format('?{0}', parameters('scriptSasToken'))))]",
           "version": "1.0.0.0"
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
       ]
     },
     {
@@ -225,18 +504,18 @@
       },
       "type": "Microsoft.Automation/automationAccounts/schedules",
       "apiVersion": "2022-08-08",
-      "name": "[format('{0}/{1}', parameters('AutomationAccountName'), format('{0}_{1}min', parameters('HostPoolName'), mul(add(range(0, 4)[copyIndex()], 1), 15)))]",
+      "name": "[format('{0}/{1}', parameters('automationAccountName'), format('{0}_{1}min', parameters('hostPoolName'), mul(add(range(0, 4)[copyIndex()], 1), 15)))]",
       "properties": {
         "advancedSchedule": {},
         "description": null,
         "expiryTime": null,
         "frequency": "Hour",
         "interval": 1,
-        "startTime": "[dateTimeAdd(parameters('Time'), format('PT{0}M', mul(add(range(0, 4)[copyIndex()], 1), 15)))]",
-        "timeZone": "[variables('TimeZones')[parameters('Location')]]"
+        "startTime": "[dateTimeAdd(parameters('time'), format('PT{0}M', mul(add(range(0, 4)[copyIndex()], 1), 15)))]",
+        "timeZone": "[variables('locations')[parameters('location')].timeZone]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
       ]
     },
     {
@@ -246,44 +525,44 @@
       },
       "type": "Microsoft.Automation/automationAccounts/jobSchedules",
       "apiVersion": "2022-08-08",
-      "name": "[format('{0}/{1}', parameters('AutomationAccountName'), guid(parameters('Time'), variables('RunbookName'), parameters('HostPoolName'), string(range(0, 4)[copyIndex()])))]",
+      "name": "[format('{0}/{1}', parameters('automationAccountName'), guid(parameters('time'), variables('runbookName'), parameters('hostPoolName'), string(range(0, 4)[copyIndex()])))]",
       "properties": {
         "parameters": {
           "TenantId": "[subscription().tenantId]",
           "SubscriptionId": "[subscription().subscriptionId]",
           "EnvironmentName": "[environment().name]",
-          "ResourceGroupName": "[parameters('HostPoolResourceGroupName')]",
-          "HostPoolName": "[parameters('HostPoolName')]",
+          "ResourceGroupName": "[parameters('hostPoolResourceGroupName')]",
+          "HostPoolName": "[parameters('hostPoolName')]",
           "MaintenanceTagName": "Maintenance",
-          "TimeDifference": "[variables('TimeDifferences')[parameters('Location')]]",
-          "BeginPeakTime": "[parameters('BeginPeakTime')]",
-          "EndPeakTime": "[parameters('EndPeakTime')]",
-          "SessionThresholdPerCPU": "[parameters('SessionThresholdPerCPU')]",
-          "MinimumNumberOfRDSH": "[parameters('MinimumNumberOfRdsh')]",
-          "LimitSecondsToForceLogOffUser": "[parameters('LimitSecondsToForceLogOffUser')]",
+          "TimeDifference": "[variables('locations')[parameters('location')].timeDifference]",
+          "BeginPeakTime": "[parameters('beginPeakTime')]",
+          "EndPeakTime": "[parameters('endPeakTime')]",
+          "SessionThresholdPerCPU": "[parameters('sessionThresholdPerCPU')]",
+          "MinimumNumberOfRDSH": "[parameters('minimumNumberOfRdsh')]",
+          "LimitSecondsToForceLogOffUser": "[parameters('limitSecondsToForceLogOffUser')]",
           "LogOffMessageTitle": "Machine is about to shutdown.",
           "LogOffMessageBody": "Your session will be logged off. Please save and close everything."
         },
         "runbook": {
-          "name": "[variables('RunbookName')]"
+          "name": "[variables('runbookName')]"
         },
         "runOn": null,
         "schedule": {
-          "name": "[format('{0}_{1}min', parameters('HostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15))]"
+          "name": "[format('{0}_{1}min', parameters('hostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15))]"
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]",
-        "[resourceId('Microsoft.Automation/automationAccounts/runbooks', parameters('AutomationAccountName'), variables('RunbookName'))]",
-        "[resourceId('Microsoft.Automation/automationAccounts/schedules', parameters('AutomationAccountName'), format('{0}_{1}min', parameters('HostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15)))]"
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/runbooks', parameters('automationAccountName'), variables('runbookName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/schedules', parameters('automationAccountName'), format('{0}_{1}min', parameters('hostPoolName'), mul(add(range(0, 4)[range(0, 4)[copyIndex()]], 1), 15)))]"
       ]
     },
     {
-      "condition": "[not(empty(parameters('LogAnalyticsWorkspaceResourceId')))]",
+      "condition": "[not(empty(parameters('logAnalyticsWorkspaceResourceId')))]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2017-05-01-preview",
-      "scope": "[format('Microsoft.Automation/automationAccounts/{0}', parameters('AutomationAccountName'))]",
-      "name": "[format('diag-{0}', parameters('AutomationAccountName'))]",
+      "scope": "[format('Microsoft.Automation/automationAccounts/{0}', parameters('automationAccountName'))]",
+      "name": "[format('diag-{0}', parameters('automationAccountName'))]",
       "properties": {
         "logs": [
           {
@@ -295,21 +574,21 @@
             "enabled": true
           }
         ],
-        "workspaceId": "[parameters('LogAnalyticsWorkspaceResourceId')]"
+        "workspaceId": "[parameters('logAnalyticsWorkspaceResourceId')]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
       ]
     },
     {
       "copy": {
-        "name": "roleAssignments",
-        "count": "[length(range(0, length(variables('RoleAssignments'))))]"
+        "name": "roleAssignments_ResourceGroups",
+        "count": "[length(range(0, length(variables('roleAssignments'))))]"
       },
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "[format('RoleAssignment_{0}_{1}', variables('RoleAssignments')[range(0, length(variables('RoleAssignments')))[copyIndex()]], parameters('Timestamp'))]",
-      "resourceGroup": "[variables('RoleAssignments')[range(0, length(variables('RoleAssignments')))[copyIndex()]]]",
+      "name": "[format('RoleAssignment_{0}_{1}', variables('roleAssignments')[range(0, length(variables('roleAssignments')))[copyIndex()]], parameters('timestamp'))]",
+      "resourceGroup": "[variables('roleAssignments')[range(0, length(variables('roleAssignments')))[copyIndex()]]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -317,7 +596,7 @@
         "mode": "Incremental",
         "parameters": {
           "PrincipalId": {
-            "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName')), '2022-08-08', 'full').identity.principalId]"
+            "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName')), '2022-08-08', 'full').identity.principalId]"
           },
           "RoleDefinitionId": {
             "value": "[resourceId('Microsoft.Authorization/roleDefinitions', '40c5ff49-9181-41f8-ae61-143b0e78555e')]"
@@ -329,8 +608,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.16.2.56959",
-              "templateHash": "7200534500754601917"
+              "version": "0.25.53.49325",
+              "templateHash": "12690683900306837929"
             }
           },
           "parameters": {
@@ -356,7 +635,7 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Automation/automationAccounts', parameters('AutomationAccountName'))]"
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
       ]
     }
   ]
