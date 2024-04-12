@@ -412,7 +412,7 @@
                 "azureFunctionsPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureFunctions]",
                 "beginPeakTime": "[steps('scaling').options.beginPeakTime]",
                 "endPeakTime": "[steps('scaling').options.endPeakTime]",
-                "environmentAbbreviation": "[steps('basics').naming.environment]",
+                "environmentAbbreviation": "[steps('basics').naming.environmentAbbreviation]",
                 "hostPoolName": "[steps('scaling').scope.hostPool.name]",
                 "hostPoolResourceGroupName": "[first(skip(split(steps('scaling').scope.hostPool.id, '/'), 4))]",
                 "identifier": "[steps('basics').naming.identifier]",
