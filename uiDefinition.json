@@ -130,7 +130,7 @@
                                     "name": "beginPeakTime",
                                     "type": "Microsoft.Common.TextBox",
                                     "label": "Begin Peak Time",
-                                    "defaultValue": "8:00",
+                                    "defaultValue": "08:00",
                                     "placeholder": "",
                                     "toolTip": "Input the time when peak hours begin for your end users.",
                                     "constraints": {
