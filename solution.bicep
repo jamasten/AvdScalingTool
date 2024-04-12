@@ -116,14 +116,15 @@ param tags object = {}
 @description('DO NOT MODIFY THIS VALUE! The timestamp is needed to differentiate deployments for certain Azure resources and must be set using a parameter.')
 param timestamp string = utcNow('yyyyMMddhhmmss')
 
-var applicationInsightsName = replace(namingConvention, 'resourceType', 'applicationInsights')
-var appServicePlanName = replace(namingConvention, 'resourceType', 'appServicePlans')
+var applicationInsightsName = replace(namingConvention, 'resourceType', resourceTypes.applicationInsights)
+var appServicePlanName = replace(namingConvention, 'resourceType', resourceTypes.appServicePlans)
 var fileShareName = 'function-app'
-var functionAppName = replace(namingConvention, 'resourceType', 'functionApps')
-var functionName = replace(namingConvention, 'resourceType', 'functions')
-var keyVaultName = replace(replace(namingConvention, 'resourceType', 'keyVaults'), '-', '')
-var locations = (loadJsonContent('data/locations.json'))[environment().name]
+var functionAppName = replace(namingConvention, 'resourceType', resourceTypes.functionApps)
+var functionName = replace(namingConvention, 'resourceType', resourceTypes.functions)
+var keyVaultName = replace(replace(namingConvention, 'resourceType', resourceTypes.keyVaults), '-', '')
+var locations = loadJsonContent('data/locations.json')[environment().name]
 var namingConvention = '${identifier}-resourceType-scaling-avd-${environmentAbbreviation}-${locations[location].abbreviation}'
+var resourceTypes = loadJsonContent('data/resourceTypes.json')
 var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
   ? [
       hostPoolResourceGroupName
@@ -132,8 +133,8 @@ var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
       hostPoolResourceGroupName
       sessionHostsResourceGroupName
     ]
-var storageAccountName = replace(replace(namingConvention, 'resourceType', 'storageAccounts'), '-', '')
-var userAssignedIdentityName = replace(namingConvention, 'resourceType', 'userAssignedIdentities')
+var storageAccountName = replace(replace(namingConvention, 'resourceType', resourceTypes.storageAccounts), '-', '')
+var userAssignedIdentityName = replace(namingConvention, 'resourceType', resourceTypes.userAssignedIdentities)
 
 resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: userAssignedIdentityName
