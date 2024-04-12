@@ -336,7 +336,7 @@
                                     "toolTip": "Select the existing Private DNS Zone for Azure Functions.",
                                     "constraints": {
                                         "required": true,
-                                        "allowedValues": "[map(filter(steps('network').privateDnsZones.api.value, (item) => contains(item.name, 'privatelink.azurewebsites.')), (item) => parse(concat('{\"label\":\"', item.name, '\",\"description\":\"Resource group: ', first(skip(split(item.id, '/'), 4)), '\",\"value\":\"', item.id, '\"}')))]"
+                                        "allowedValues": "[map(filter(steps('network').privateDnsZones.api.value, (item) => or(contains(item.name, 'privatelink.azurewebsites.'), contains(item.name, 'privatelink.appservice.'))), (item) => parse(concat('{\"label\":\"', item.name, '\",\"description\":\"Resource group: ', first(skip(split(item.id, '/'), 4)), '\",\"value\":\"', item.id, '\"}')))]"
                                     }
                                 },
                                 {
