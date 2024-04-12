@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.54.24096",
-      "templateHash": "2609545692126522926"
+      "version": "0.26.170.59819",
+      "templateHash": "286105426109553578"
     }
   },
   "parameters": {
@@ -843,14 +843,14 @@
     {
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
-      "name": "[format('pe-{0}', variables('storageAccountName'))]",
+      "name": "[format('pe-blob-{0}', variables('storageAccountName'))]",
       "location": "[parameters('location')]",
       "tags": "[if(contains(parameters('tags'), 'Microsoft.Network/privateEndpoints'), parameters('tags')['Microsoft.Network/privateEndpoints'], createObject())]",
       "properties": {
-        "customNetworkInterfaceName": "[format('nic-{0}', variables('storageAccountName'))]",
+        "customNetworkInterfaceName": "[format('nic-blob-{0}', variables('storageAccountName'))]",
         "privateLinkServiceConnections": [
           {
-            "name": "[format('pe-{0}', variables('storageAccountName'))]",
+            "name": "[format('pe-blob-{0}', variables('storageAccountName'))]",
             "properties": {
               "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
               "groupIds": [
@@ -870,7 +870,7 @@
     {
       "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
       "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', format('pe-{0}', variables('storageAccountName')), variables('storageAccountName'))]",
+      "name": "[format('{0}/{1}', format('pe-blob-{0}', variables('storageAccountName')), variables('storageAccountName'))]",
       "properties": {
         "privateDnsZoneConfigs": [
           {
@@ -882,21 +882,21 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('storageAccountName')))]",
+        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-blob-{0}', variables('storageAccountName')))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     },
     {
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
-      "name": "[format('pe-{0}', variables('storageAccountName'))]",
+      "name": "[format('pe-file-{0}', variables('storageAccountName'))]",
       "location": "[parameters('location')]",
       "tags": "[if(contains(parameters('tags'), 'Microsoft.Network/privateEndpoints'), parameters('tags')['Microsoft.Network/privateEndpoints'], createObject())]",
       "properties": {
-        "customNetworkInterfaceName": "[format('nic-{0}', variables('storageAccountName'))]",
+        "customNetworkInterfaceName": "[format('nic-file-{0}', variables('storageAccountName'))]",
         "privateLinkServiceConnections": [
           {
-            "name": "[format('pe-{0}', variables('storageAccountName'))]",
+            "name": "[format('pe-file-{0}', variables('storageAccountName'))]",
             "properties": {
               "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
               "groupIds": [
@@ -916,7 +916,7 @@
     {
       "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
       "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', format('pe-{0}', variables('storageAccountName')), variables('storageAccountName'))]",
+      "name": "[format('{0}/{1}', format('pe-file-{0}', variables('storageAccountName')), variables('storageAccountName'))]",
       "properties": {
         "privateDnsZoneConfigs": [
           {
@@ -928,7 +928,7 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('storageAccountName')))]",
+        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-file-{0}', variables('storageAccountName')))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     },
@@ -1205,8 +1205,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "522055449599514231"
+              "version": "0.26.170.59819",
+              "templateHash": "13011554662180100232"
             }
           },
           "parameters": {

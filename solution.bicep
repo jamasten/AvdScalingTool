@@ -351,14 +351,14 @@ resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01
 }
 
 resource privateEndpoint_storage_blob 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: 'pe-${storageAccountName}'
+  name: 'pe-blob-${storageAccountName}'
   location: location
   tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
   properties: {
-    customNetworkInterfaceName: 'nic-${storageAccountName}'
+    customNetworkInterfaceName: 'nic-blob-${storageAccountName}'
     privateLinkServiceConnections: [
       {
-        name: 'pe-${storageAccountName}'
+        name: 'pe-blob-${storageAccountName}'
         properties: {
           privateLinkServiceId: storageAccount.id
           groupIds: [
@@ -389,14 +389,14 @@ resource privateDnsZoneGroup_storage_blob 'Microsoft.Network/privateEndpoints/pr
 }
 
 resource privateEndpoint_storage_file 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: 'pe-${storageAccountName}'
+  name: 'pe-file-${storageAccountName}'
   location: location
   tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
   properties: {
-    customNetworkInterfaceName: 'nic-${storageAccountName}'
+    customNetworkInterfaceName: 'nic-file-${storageAccountName}'
     privateLinkServiceConnections: [
       {
-        name: 'pe-${storageAccountName}'
+        name: 'pe-file-${storageAccountName}'
         properties: {
           privateLinkServiceId: storageAccount.id
           groupIds: [
