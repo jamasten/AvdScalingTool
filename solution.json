@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "11484666270916037144"
+      "templateHash": "11778307283103148702"
     }
   },
   "parameters": {
@@ -843,12 +843,15 @@
     {
       "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
       "apiVersion": "2022-09-01",
-      "name": "[format('{0}/default/{1}', variables('storageAccountName'), variables('fileShareName'))]",
+      "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', variables('fileShareName'))]",
       "properties": {
         "accessTier": "TransactionOptimized",
         "shareQuota": 5120,
         "enabledProtocols": "SMB"
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('storageAccountName'), 'default')]"
+      ]
     },
     {
       "type": "Microsoft.Network/privateEndpoints",

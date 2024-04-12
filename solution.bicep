@@ -343,7 +343,8 @@ resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2022-09-01
 }
 
 resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01' = {
-  name: '${storageAccountName}/default/${fileShareName}'
+  parent: fileServices
+  name: fileShareName
   properties: {
     accessTier: 'TransactionOptimized'
     shareQuota: 5120
