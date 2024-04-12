@@ -27,7 +27,7 @@
                             }
                         },
                         {
-                            "name": "namingSection",
+                            "name": "naming",
                             "label": "Mission Landing Zone Name",
                             "type": "Microsoft.Common.Section",
                             "elements": [
