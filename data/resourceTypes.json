@@ -1,0 +1,9 @@
+{
+    "applicationInsights": "appi",
+    "appServicePlans": "asp",
+    "functionApps": "fa",
+    "functions": "func",
+    "keyVaults": "kv",
+    "storageAccounts": "st",
+    "userAssignedIdentities": "uami"
+}
