@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "9348825279725845868"
+      "templateHash": "10800526981280332989"
     }
   },
   "parameters": {
@@ -600,6 +600,7 @@
       "actionGroups": "ag",
       "applicationInsights": "appi",
       "appServicePlans": "asp",
+      "diagnosticSettings": "diag",
       "functionApps": "fa",
       "functions": "func",
       "keyVaults": "kv",
@@ -614,6 +615,7 @@
     "actionGroupName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-aisd', variables('resourceTypes').actionGroups))]",
     "applicationInsightsName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').applicationInsights)]",
     "appServicePlanName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').appServicePlans)]",
+    "diagnosticsSettingName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-subType', variables('resourceTypes').diagnosticSettings))]",
     "fileShareName": "function-app",
     "functionAppName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').functionApps)]",
     "functionName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').functions)]",
@@ -971,7 +973,7 @@
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2017-05-01-preview",
       "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}', variables('storageAccountName'), 'default')]",
-      "name": "[format('diag-{0}', variables('storageAccountName'))]",
+      "name": "[replace(variables('diagnosticsSettingName'), 'subType', 'blob-st')]",
       "properties": {
         "logs": [
           {
@@ -988,8 +990,7 @@
         "workspaceId": "[parameters('logAnalyticsWorkspaceResourceId')]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
       ]
     },
     {

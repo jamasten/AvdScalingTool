@@ -2,6 +2,7 @@
     "actionGroups": "ag",
     "applicationInsights": "appi",
     "appServicePlans": "asp",
+    "diagnosticSettings": "diag",
     "functionApps": "fa",
     "functions": "func",
     "keyVaults": "kv",

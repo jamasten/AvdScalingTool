@@ -125,6 +125,7 @@ param timestamp string = utcNow('yyyyMMddhhmmss')
 var actionGroupName = replace(namingConvention, 'resourceType', '${resourceTypes.actionGroups}-aisd')
 var applicationInsightsName = replace(namingConvention, 'resourceType', resourceTypes.applicationInsights)
 var appServicePlanName = replace(namingConvention, 'resourceType', resourceTypes.appServicePlans)
+var diagnosticsSettingName = replace(namingConvention, 'resourceType', '${resourceTypes.diagnosticSettings}-subType')
 var fileShareName = 'function-app'
 var functionAppName = replace(namingConvention, 'resourceType', resourceTypes.functionApps)
 var functionName = replace(namingConvention, 'resourceType', resourceTypes.functions)
@@ -438,10 +439,10 @@ resource privateDnsZoneGroup_storage_file 'Microsoft.Network/privateEndpoints/pr
   }
 }
 
-resource diagnosticSetting_storage 'Microsoft.Insights/diagnosticsettings@2017-05-01-preview' =
+resource diagnosticSetting_storage_blob 'Microsoft.Insights/diagnosticsettings@2017-05-01-preview' =
   if (!empty(logAnalyticsWorkspaceResourceId)) {
     scope: blobService
-    name: 'diag-${storageAccount.name}'
+    name: replace(diagnosticsSettingName, 'subType', 'blob-st')
     properties: {
       logs: [
         {
