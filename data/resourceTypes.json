@@ -1,9 +1,13 @@
 {
+    "actionGroups": "ag",
     "applicationInsights": "appi",
     "appServicePlans": "asp",
     "functionApps": "fa",
     "functions": "func",
     "keyVaults": "kv",
+    "networkInterfaces": "nic",
+    "privateEndpoints": "pe",
+    "smartDetectorAlertRules": "sdar",
     "storageAccounts": "st",
     "userAssignedIdentities": "uami"
 }

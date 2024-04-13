@@ -36,6 +36,12 @@ param azureFunctionsPrivateDnsZoneResourceId string
 @description('The time of day when the peak period begins.')
 param beginPeakTime string = '08:00'
 
+@description('The resource ID of the target subnet delegated for outbound access for the function app.')
+param delegatedSubnetResourceId string
+
+@description('The email address of the distribution group to receive alerts.')
+param distributionGroup string = ''
+
 @allowed([
   '00:00'
   '01:00'
@@ -101,14 +107,14 @@ param logAnalyticsWorkspaceResourceId string = ''
 @description('The minimum number of session host VMs to keep running during off-peak hours. The scaling tool will not work if all virtual machines are turned off and the Start VM On Connect solution is not enabled.')
 param minimumNumberOfRdsh string = '0'
 
+@description('The resource ID of the subnet for the private endpoints.')
+param privateEndpointsSubnetResourceId string
+
 @description('The name of the resource group containing the AVD session hosts.')
 param sessionHostsResourceGroupName string
 
 @description('The maximum number of sessions per CPU that will be used as a threshold to determine when new session host VMs need to be started during peak hours')
 param sessionThresholdPerCPU string = '1'
-
-@description('The resource ID of the target subnet for the private endpoints.')
-param subnetResourceId string
 
 @description('The key / value pairs of metadata for the Azure resource groups and resources.')
 param tags object = {}
@@ -116,6 +122,7 @@ param tags object = {}
 @description('DO NOT MODIFY THIS VALUE! The timestamp is needed to differentiate deployments for certain Azure resources and must be set using a parameter.')
 param timestamp string = utcNow('yyyyMMddhhmmss')
 
+var actionGroupName = replace(namingConvention, 'resourceType', '${resourceTypes.actionGroups}-aisd')
 var applicationInsightsName = replace(namingConvention, 'resourceType', resourceTypes.applicationInsights)
 var appServicePlanName = replace(namingConvention, 'resourceType', resourceTypes.appServicePlans)
 var fileShareName = 'function-app'
@@ -124,6 +131,8 @@ var functionName = replace(namingConvention, 'resourceType', resourceTypes.funct
 var keyVaultName = replace(replace(namingConvention, 'resourceType', resourceTypes.keyVaults), '-', '')
 var locations = loadJsonContent('data/locations.json')[environment().name]
 var namingConvention = '${identifier}-resourceType-scaling-avd-${environmentAbbreviation}-${locations[location].abbreviation}'
+var networkInterfaceName = replace(namingConvention, 'resourceType', '${resourceTypes.networkInterfaces}-subType')
+var privateEndpointName = replace(namingConvention, 'resourceType', '${resourceTypes.privateEndpoints}-subType')
 var resourceTypes = loadJsonContent('data/resourceTypes.json')
 var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
   ? [
@@ -133,6 +142,7 @@ var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
       hostPoolResourceGroupName
       sessionHostsResourceGroupName
     ]
+var smartDetectorAlertRuleName = replace(namingConvention, 'resourceType', '${resourceTypes.smartDetectorAlertRules}-failure-anomalies')
 var storageAccountName = replace(replace(namingConvention, 'resourceType', resourceTypes.storageAccounts), '-', '')
 var userAssignedIdentityName = replace(namingConvention, 'resourceType', resourceTypes.userAssignedIdentities)
 
@@ -181,14 +191,14 @@ resource vault 'Microsoft.KeyVault/vaults@2022-07-01' = {
 }
 
 resource privateEndpoint_vault 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: 'pe-${keyVaultName}'
+  name: replace(privateEndpointName, 'subType', 'kv')
   location: location
   tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
   properties: {
-    customNetworkInterfaceName: 'nic-${keyVaultName}'
+    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', 'kv')
     privateLinkServiceConnections: [
       {
-        name: 'pe-${keyVaultName}'
+        name: replace(privateEndpointName, 'subType', 'kv')
         properties: {
           privateLinkServiceId: vault.id
           groupIds: [
@@ -198,7 +208,7 @@ resource privateEndpoint_vault 'Microsoft.Network/privateEndpoints@2023-04-01' =
       }
     ]
     subnet: {
-      id: subnetResourceId
+      id: privateEndpointsSubnetResourceId
     }
   }
 }
@@ -353,14 +363,14 @@ resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01
 }
 
 resource privateEndpoint_storage_blob 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: 'pe-blob-${storageAccountName}'
+  name: replace(privateEndpointName, 'subType', 'blob-st')
   location: location
   tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
   properties: {
-    customNetworkInterfaceName: 'nic-blob-${storageAccountName}'
+    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', 'blob-st')
     privateLinkServiceConnections: [
       {
-        name: 'pe-blob-${storageAccountName}'
+        name: replace(privateEndpointName, 'subType', 'blob-st')
         properties: {
           privateLinkServiceId: storageAccount.id
           groupIds: [
@@ -370,7 +380,7 @@ resource privateEndpoint_storage_blob 'Microsoft.Network/privateEndpoints@2023-0
       }
     ]
     subnet: {
-      id: subnetResourceId
+      id: privateEndpointsSubnetResourceId
     }
   }
 }
@@ -391,14 +401,14 @@ resource privateDnsZoneGroup_storage_blob 'Microsoft.Network/privateEndpoints/pr
 }
 
 resource privateEndpoint_storage_file 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: 'pe-file-${storageAccountName}'
+  name: replace(privateEndpointName, 'subType', 'file-st')
   location: location
   tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
   properties: {
-    customNetworkInterfaceName: 'nic-file-${storageAccountName}'
+    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', 'file-st')
     privateLinkServiceConnections: [
       {
-        name: 'pe-file-${storageAccountName}'
+        name: replace(privateEndpointName, 'subType', 'file-st')
         properties: {
           privateLinkServiceId: storageAccount.id
           groupIds: [
@@ -408,7 +418,7 @@ resource privateEndpoint_storage_file 'Microsoft.Network/privateEndpoints@2023-0
       }
     ]
     subnet: {
-      id: subnetResourceId
+      id: privateEndpointsSubnetResourceId
     }
   }
 }
@@ -583,7 +593,7 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
       netFrameworkVersion: 'v6.0'
     }
     clientAffinityEnabled: false
-    virtualNetworkSubnetId: subnetResourceId
+    virtualNetworkSubnetId: delegatedSubnetResourceId
     publicNetworkAccess: 'Disabled'
     vnetRouteAllEnabled: true
     httpsOnly: true
@@ -614,13 +624,13 @@ resource function 'Microsoft.Web/sites/functions@2020-12-01' = {
 }
 
 resource privateEndpoint_functionApp 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: 'pe-${functionAppName}'
+  name: replace(privateEndpointName, 'subType', 'fa')
   location: location
   properties: {
-    customNetworkInterfaceName: 'nic-${functionAppName}'
+    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', 'fa')
     privateLinkServiceConnections: [
       {
-        name: 'pe-${functionAppName}'
+        name: replace(privateEndpointName, 'subType', 'fa')
         properties: {
           privateLinkServiceId: functionApp.id
           groupIds: [
@@ -630,7 +640,7 @@ resource privateEndpoint_functionApp 'Microsoft.Network/privateEndpoints@2023-04
       }
     ]
     subnet: {
-      id: subnetResourceId
+      id: privateEndpointsSubnetResourceId
     }
   }
 }
@@ -661,3 +671,55 @@ module roleAssignments_ResourceGroups 'modules/roleAssignments.bicep' = [
     }
   }
 ]
+
+resource actionGroup 'microsoft.insights/actionGroups@2023-01-01' = {
+  name: actionGroupName
+  location: 'Global'
+  properties: {
+    groupShortName: 'SmartDetect'
+    enabled: true
+    emailReceivers: empty(distributionGroup)
+      ? []
+      : [
+          {
+            emailAddress: distributionGroup
+            name: distributionGroup
+            useCommonAlertSchema: true
+          }
+        ]
+    armRoleReceivers: [
+      {
+        name: 'Monitoring Contributor'
+        roleId: '749f88d5-cbae-40b8-bcfc-e573ddc772fa'
+        useCommonAlertSchema: true
+      }
+      {
+        name: 'Monitoring Reader'
+        roleId: '43d0d8ad-25c7-4714-9337-8ba259a9fe05'
+        useCommonAlertSchema: true
+      }
+    ]
+  }
+}
+
+resource smartDetectorAlertRule 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = {
+  name: smartDetectorAlertRuleName
+  location: 'global'
+  properties: {
+    description: 'Failure Anomalies notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls.'
+    state: 'Enabled'
+    severity: 'Sev3'
+    frequency: 'PT1M'
+    detector: {
+      id: 'FailureAnomaliesDetector'
+    }
+    scope: [
+      applicationInsights.id
+    ]
+    actionGroups: {
+      groupIds: [
+        actionGroup.id
+      ]
+    }
+  }
+}

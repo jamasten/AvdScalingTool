@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "11778307283103148702"
+      "templateHash": "14094229925535567802"
     }
   },
   "parameters": {
@@ -58,6 +58,19 @@
       ],
       "metadata": {
         "description": "The time of day when the peak period begins."
+      }
+    },
+    "delegatedSubnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "The resource ID of the target subnet delegated for outbound access for the function app."
+      }
+    },
+    "distributionGroup": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The email address of the distribution group to receive alerts."
       }
     },
     "endPeakTime": {
@@ -164,6 +177,12 @@
         "description": "The minimum number of session host VMs to keep running during off-peak hours. The scaling tool will not work if all virtual machines are turned off and the Start VM On Connect solution is not enabled."
       }
     },
+    "privateEndpointsSubnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "The resource ID of the subnet for the private endpoints."
+      }
+    },
     "sessionHostsResourceGroupName": {
       "type": "string",
       "metadata": {
@@ -175,12 +194,6 @@
       "defaultValue": "1",
       "metadata": {
         "description": "The maximum number of sessions per CPU that will be used as a threshold to determine when new session host VMs need to be started during peak hours"
-      }
-    },
-    "subnetResourceId": {
-      "type": "string",
-      "metadata": {
-        "description": "The resource ID of the target subnet for the private endpoints."
       }
     },
     "tags": {
@@ -584,16 +597,21 @@
       }
     },
     "$fxv#1": {
+      "actionGroups": "ag",
       "applicationInsights": "appi",
       "appServicePlans": "asp",
       "functionApps": "fa",
       "functions": "func",
       "keyVaults": "kv",
+      "networkInterfaces": "nic",
+      "privateEndpoints": "pe",
+      "smartDetectorAlertRules": "sdar",
       "storageAccounts": "st",
       "userAssignedIdentities": "uami"
     },
     "$fxv#2": "[CmdletBinding(SupportsShouldProcess)]\nparam(\n\t[Parameter(Mandatory)]\n\t[string]$BeginPeakTime,\n\n\t[Parameter(Mandatory)]\n\t[string]$EndPeakTime,\n\n\t[Parameter(Mandatory)]\n\t[string]$EnvironmentName,\n\n\t[Parameter(Mandatory)]\n\t[string]$HostPoolName,\n\n\t[Parameter(Mandatory)]\n\t[string]$HostPoolResourceGroupName,\n\n\t[Parameter(Mandatory)]\n\t[int]$LimitSecondsToForceLogOffUser,\n\n\t[Parameter(Mandatory)]\n\t[string]$LogOffMessageBody,\n\n\t[Parameter(Mandatory)]\n\t[string]$LogOffMessageTitle,\n\n\t[Parameter(Mandatory)]\n\t[string]$MaintenanceTagName,\n\n\t[Parameter(Mandatory)]\n\t[int]$MinimumNumberOfRDSH,\n\n\t[Parameter(Mandatory)]\n\t[string]$ResourceManagerUrl,\n\n\t[Parameter(Mandatory)]\n\t[double]$SessionThresholdPerCPU,\n\n\t[Parameter(Mandatory)]\n\t[string]$SubscriptionId,\n\n    [Parameter(Mandatory)]\n\t[string]$TenantId,\n\n\t[Parameter(Mandatory)]\n\t[string]$TimeDifference,\n\n\t[Parameter(Mandatory)]\n\t[string]$Timer\n)\n\ntry\n{\n\t[string[]]$DesiredRunningStates = @('Available', 'NeedsAssistance')\n\t[string[]]$TimeDiffHrsMin = \"$($TimeDifference):0\".Split(':')\n\n\n\t#region Functions\n\tfunction Get-LocalDateTime\n    {\n\t\treturn (Get-Date).ToUniversalTime().AddHours($TimeDiffHrsMin[0]).AddMinutes($TimeDiffHrsMin[1])\n\t}\n\n\tfunction Write-Log \n    {\n\t\t[CmdletBinding()]\n\t\tparam (\n\t\t\t[Parameter(Mandatory = $false)]\n\t\t\t[switch]$Err,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolName,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$Message,\n\n\t\t\t[Parameter(Mandatory = $false)]\n\t\t\t[switch]$Warn\n\t\t)\n\n\t\t[string]$MessageTimeStamp = (Get-LocalDateTime).ToString('yyyy-MM-dd HH:mm:ss')\n\t\t$Message = \"[$($MyInvocation.ScriptLineNumber)] [$($HostPoolName)] $Message\"\n\t\t[string]$WriteMessage = \"[$($MessageTimeStamp)] $Message\"\n\n\t\tif ($Err)\n        {\n\t\t\tWrite-Error $WriteMessage\n\t\t\t$Message = \"ERROR: $Message\"\n\t\t}\n\t\telseif ($Warn)\n        {\n\t\t\tWrite-Warning $WriteMessage\n\t\t\t$Message = \"WARN: $Message\"\n\t\t}\n\t\telse \n        {\n\t\t\tWrite-Output $WriteMessage\n\t\t}\n\t}\n\n\tfunction Set-nVMsToStartOrStop \n    {\n\t\tparam (\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolName,\n\n\t\t\t[Parameter(Mandatory = $false)]\n\t\t\t[switch]$InPeakHours,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[int]$MaxUserSessionsPerVM,\n\t\t\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[int]$nRunningCores,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[int]$nRunningVMs,\n\t\t\t\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[int]$nUserSessions,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[hashtable]$Res\n\t\t)\n\n\t\t# check if need to adjust min num of running session hosts required if the number of user sessions is close to the max allowed by the min num of running session hosts required\n\t\t[double]$MaxUserSessionsThreshold = 0.9\n\t\t[int]$MaxUserSessionsThresholdCapacity = [math]::Floor($MinimumNumberOfRDSH * $MaxUserSessionsPerVM * $MaxUserSessionsThreshold)\n\t\tif ($nUserSessions -gt $MaxUserSessionsThresholdCapacity)\n        {\n\t\t\t$MinimumNumberOfRDSH = [math]::Ceiling($nUserSessions / ($MaxUserSessionsPerVM * $MaxUserSessionsThreshold))\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Number of user sessions is more than $($MaxUserSessionsThreshold * 100) % of the max number of sessions allowed with minimum number of running session hosts required ($MaxUserSessionsThresholdCapacity). Adjusted minimum number of running session hosts required to $MinimumNumberOfRDSH\"\n\t\t}\n\n\t\t# Check if minimum number of session hosts are running\n\t\tif ($nRunningVMs -lt $MinimumNumberOfRDSH)\n        {\n\t\t\t$res.nVMsToStart = $MinimumNumberOfRDSH - $nRunningVMs\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Number of running session host is less than minimum required. Need to start $($res.nVMsToStart) VMs\"\n\t\t}\n\t\t\n\t\tif ($InPeakHours)\n        {\n\t\t\t[double]$nUserSessionsPerCore = $nUserSessions / $nRunningCores\n\t\t\t# In peak hours: check if current capacity is meeting the user demands\n\t\t\tif ($nUserSessionsPerCore -gt $SessionThresholdPerCPU)\n            {\n\t\t\t\t$res.nCoresToStart = [math]::Ceiling(($nUserSessions / $SessionThresholdPerCPU) - $nRunningCores)\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"[In peak hours] Number of user sessions per Core is more than the threshold. Need to start $($res.nCoresToStart) cores\"\n\t\t\t}\n\n\t\t\treturn\n\t\t}\n\n\t\tif ($nRunningVMs -gt $MinimumNumberOfRDSH)\n        {\n\t\t\t# Calculate the number of session hosts to stop\n\t\t\t$res.nVMsToStop = $nRunningVMs - $MinimumNumberOfRDSH\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"[Off peak hours] Number of running session host is greater than minimum required. Need to stop $($res.nVMsToStop) VMs\"\n\t\t}\n\t}\n\n\tfunction TryUpdateSessionHostDrainMode\n    {\n\t\t[CmdletBinding(SupportsShouldProcess)]\n\t\tparam (\n\t\t\t[Parameter(Mandatory = $false)]\n\t\t\t[switch]$AllowNewSession,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[hashtable]$Header,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolName,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolResourceGroupName,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$ResourceManagerUrl,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[PSCustomObject]$SessionHost,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$SubscriptionId,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[PSCustomObject]$VM\n\t\t)\n\t\tBegin { }\n\t\tProcess \n        {\n\t\t\tif ($SessionHost.properties.allowNewSession -eq $AllowNewSession)\n            {\n\t\t\t\treturn\n\t\t\t}\n\t\t\t[string]$SessionHostName = $VM.name\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Update session host '$SessionHostName' to set allow new sessions to $AllowNewSession\"\n\t\t\tif ($PSCmdlet.ShouldProcess($SessionHostName, \"Update session host to set allow new sessions to $AllowNewSession\"))\n            {\n\t\t\t\ttry \n\t\t\t\t{\n\t\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '?api-version=2022-02-10-preview'\n\t\t\t\t\t$SessionHost = Invoke-RestMethod -Headers $Header -Body (@{properties = @{allowNewSession = $AllowNewSession}} | ConvertTo-Json) -Method 'Patch' -Uri $Uri\n\n\t\t\t\t\tif ($SessionHost.properties.allowNewSession -ne $AllowNewSession) \n\t\t\t\t\t{\n\t\t\t\t\t\tthrow $SessionHost\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tcatch\n\t\t\t\t{\n\t\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Failed to update the session host '$SessionHostName' to set allow new sessions to $($AllowNewSession): $($PSItem | Format-List -Force | Out-String)\"\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tEnd { }\n\t}\n\n\tfunction TryForceLogOffUser\n    {\n\t\t[CmdletBinding(SupportsShouldProcess)]\n\t\tparam (\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[hashtable]$Header,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolName,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolResourceGroupName,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$ResourceManagerUrl,\n\n\t\t\t[Parameter(Mandatory = $true, ValueFromPipeline = $true)]\n\t\t\t$Session,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$SubscriptionId\n\t\t)\n\t\tBegin { }\n\t\tProcess\n        {\n            [string[]]$Toks = $Session.Name.Split('/')\n            [string]$SessionHostName = $Toks[1]\n            [string]$SessionID = $Toks[-1]\n            [string]$User = $Session.ActiveDirectoryUserName\n\n\t\t\ttry \n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Force log off user: '$User', session ID: $SessionID\"\n\t\t\t\tif ($PSCmdlet.ShouldProcess($SessionID, 'Force log off user with session ID'))\n\t\t\t\t{\n\t\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '/userSessions/' + $SessionID + '?api-version=2022-02-10-preview&force=True'\n\t\t\t\t\tInvoke-RestMethod -Headers $Header -Method 'Delete' -Uri $Uri\n\t\t\t\t}\n\t\t\t}\n\t\t\tcatch \n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Failed to force log off user: '$User', session ID: $SessionID $($PSItem | Format-List -Force | Out-String)\"\n\t\t\t}\n\t\t}\n\t\tEnd { }\n\t}\n\n\tfunction TryResetSessionHostDrainModeAndUserSessions\n    {\n\t\t[CmdletBinding(SupportsShouldProcess)]\n\t\tparam (\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[hashtable]$Header,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolName,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$HostPoolResourceGroupName,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$ResourceManagerUrl,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[PSCustomObject]$SessionHost,\n\n\t\t\t[Parameter(Mandatory = $true)]\n\t\t\t[string]$SubscriptionId,\n\n\t\t\t[Parameter(Mandatory = $true, ValueFromPipeline = $true)]\n\t\t\t[PSCustomObject]$VM\n\t\t)\n\t\tBegin { }\n\t\tProcess \n        {\n\t\t\tTryUpdateSessionHostDrainMode -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost $SessionHost -SubscriptionId $SubscriptionId -VM $VM -AllowNewSession:$true\n\t\t\t\n\t\t\t[string]$SessionHostName = $VM.name\n\t\t\tif ($SessionHost.properties.sessions -eq 0)\n            {\n\t\t\t\treturn\n\t\t\t}\n\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Session host '$SessionHostName' still has $($SessionHost.properties.sessions) sessions left behind in broker DB\"\n\n\t\t\t[array]$UserSessions = @()\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Get all user sessions from session host '$SessionHostName'\"\n\t\t\ttry \n\t\t\t{\n\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '/userSessions?api-version=2022-02-10-preview'\n\t\t\t\t$UserSessions = Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri\n\t\t\t}\n\t\t\tcatch \n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Failed to retrieve user sessions of session host '$SessionHostName': $($PSItem | Format-List -Force | Out-String)\"\n\t\t\t\treturn\n\t\t\t}\n\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Force log off $($UserSessions.Count) users on session host: '$SessionHostName'\"\n\t\t\t$UserSessions | TryForceLogOffUser -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SubscriptionId $SubscriptionId\n\t\t}\n\t\tEnd { }\n\t}\n\t#endregion Functions\n\n\tSet-ExecutionPolicy -ExecutionPolicy 'Undefined' -Scope 'Process' -Force -Confirm:$false\n\tif (!$SkipAuth)\n    {\n\t\t# Note: this requires admin priviledges\n\t\tSet-ExecutionPolicy -ExecutionPolicy 'Unrestricted' -Scope 'LocalMachine' -Force -Confirm:$false\n\t}\n\n\t# Note: https://stackoverflow.com/questions/41674518/powershell-setting-security-protocol-to-tls-1-2\n\t[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\n\n\n\t#region Azure Authentication\n    $AccessToken = $null\n    try\n    {\n\t\t$TokenAuthURI = $env:IDENTITY_ENDPOINT + '?resource=' + $ResourceManagerUrl + '&api-version=2019-08-01'\n\t\t$TokenResponse = Invoke-RestMethod -Method Get -Headers @{\"X-IDENTITY-HEADER\"=\"$env:IDENTITY_HEADER\"} -Uri $TokenAuthURI\n\t\t$AccessToken = $TokenResponse.access_token\n\t\t$Header = @{\n\t\t\t'Content-Type'='application/json'\n\t\t\t'Authorization'='Bearer ' + $AccessToken\n\t\t}\n    }\n    catch\n    {\n        throw [System.Exception]::new('Failed to authenticate Azure with application ID, tenant ID, subscription ID', $PSItem.Exception)\n    }\n    Write-Log -HostPoolName $HostPoolName -Message \"Successfully authenticated with Azure using a managed identity\"\n\t#endregion Azure Authentication\n\n\n\t#region validate host pool, validate / update HostPool load balancer type, ensure there is at least 1 session host, get num of user sessions\n\t# Validate and get HostPool info\n\t$HostPool = $null\n\ttry \n\t{\n\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Get Hostpool info of '$HostPoolName' in resource group '$HostPoolResourceGroupName'\"\n\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '?api-version=2022-02-10-preview'\n\t\t$HostPool = Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri\n\n\t\tif (!$HostPool) \n\t\t{\n\t\t\tthrow $HostPool\n\t\t}\n\t}\n\tcatch \n\t{\n\t\tthrow [System.Exception]::new(\"Failed to get Hostpool info of '$HostPoolName' in resource group '$HostPoolResourceGroupName'. Ensure that you have entered the correct values\", $PSItem.Exception)\n\t}\n\n\t# Ensure HostPool load balancer type is not persistent\n\tif ($HostPool.properties.loadBalancerType -ieq 'Persistent')\n    {\n\t\tthrow \"HostPool '$HostPoolName' is configured with 'Persistent' load balancer type. Scaling tool only supports these load balancer types: BreadthFirst, DepthFirst\"\n\t}\n\n\tWrite-Log -HostPoolName $HostPoolName -Message 'Get all session hosts'\n\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts?api-version=2022-02-10-preview'\n\t$SessionHosts = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).value\n\n\tif (!$SessionHosts)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Message \"There are no session hosts in the Hostpool '$HostPoolName'. Ensure that hostpool has session hosts\"\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'End'\n\t\treturn\n\t}\n\n\tWrite-Log -HostPoolName $HostPoolName -Message 'Get number of user sessions in Hostpool'\n\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/userSessions?api-version=2022-02-10-preview'\n\t[int]$nUserSessions = @(Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).Count\n\n\t# Set up breadth 1st load balacing type\n\t# Note: breadth 1st is enforced on AND off peak hours to simplify the things with scaling in the start/end of peak hours\n\tif (!$SkipUpdateLoadBalancerType -and $HostPool.properties.loadBalancerType -ine 'BreadthFirst')\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Update HostPool with 'BreadthFirst' load balancer type (current: '$($HostPool.properties.loadBalancerType)')\"\n\t\tif ($PSCmdlet.ShouldProcess($HostPoolName, \"Update HostPool with BreadthFirstLoadBalancer type (current: '$($HostPool.properties.loadBalancerType)')\"))\n        {\n\t\t\t$Body = @{\n\t\t\t\tproperties = @{\n\t\t\t\t\tloadBalancerType = 'BreadthFirst'\n\t\t\t\t}\n\t\t\t}\n\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '?api-version=2022-02-10-preview'\n\t\t\t$HostPool = Invoke-RestMethod -Headers $Header -Body $Body -Method 'Patch' -Uri $Uri\n\t\t}\n\t}\n\n\tWrite-Log -HostPoolName $HostPoolName -Message \"HostPool info: $($HostPool | Format-List -Force | Out-String)\"\n\tWrite-Log -HostPoolName $HostPoolName -Message \"Number of session hosts in the HostPool: $($SessionHosts.Count)\"\n\t#endregion\n\t\n\n\t# region Peak Hours #\n\t# Convert local time, begin peak time & end peak time from UTC to local time\n\t$CurrentDateTime = Get-LocalDateTime\n\t$BeginPeakDateTime = [datetime]::Parse($CurrentDateTime.ToShortDateString() + ' ' + $BeginPeakTime)\n\t$EndPeakDateTime = [datetime]::Parse($CurrentDateTime.ToShortDateString() + ' ' + $EndPeakTime)\n\n\t# Adjust peak times to make sure begin peak time is always before end peak time\n\tif ($EndPeakDateTime -lt $BeginPeakDateTime)\n    {\n\t\tif ($CurrentDateTime -lt $EndPeakDateTime)\n        {\n\t\t\t$BeginPeakDateTime = $BeginPeakDateTime.AddDays(-1)\n\t\t}\n\t\telse\n        {\n\t\t\t$EndPeakDateTime = $EndPeakDateTime.AddDays(1)\n\t\t}\n\t}\n\n\tWrite-Log -HostPoolName $HostPoolName -Message \"Using current time: $($CurrentDateTime.ToString('yyyy-MM-dd HH:mm:ss')), begin peak time: $($BeginPeakDateTime.ToString('yyyy-MM-dd HH:mm:ss')), end peak time: $($EndPeakDateTime.ToString('yyyy-MM-dd HH:mm:ss'))\"\n\n\t[bool]$InPeakHours = ($BeginPeakDateTime -le $CurrentDateTime -and $CurrentDateTime -le $EndPeakDateTime)\n\tif ($InPeakHours)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'In peak hours'\n\t}\n\telse\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'Off peak hours'\n\t}\n\t# endregion Peak Hours #\n\n\n\t#region get all session hosts, VMs & user sessions info and compute workload\n\t# Note: session host is considered \"running\" if its running AND is in desired states AND allowing new sessions\n\t# Number of session hosts that are running, are in desired states and allowing new sessions\n\t[int]$nRunningVMs = 0\n\t# Number of cores that are running, are in desired states and allowing new sessions\n\t[int]$nRunningCores = 0\n\t# Object that contains all session host objects, VM instance objects except the ones that are under maintenance\n\t$VMs = @{}\n\t# Object that contains the number of cores for each VM size SKU\n\t$VMSizeCores = @{}\n\t# Number of user sessions reported by each session host that is running, is in desired state and allowing new sessions\n\t[int]$nUserSessionsFromAllRunningVMs = 0\n\n\t# Populate all session hosts objects\n\tforeach ($SessionHost in $SessionHosts)\n    {\n\t\t[string]$VirtualMachineResourceId = $SessionHost.properties.resourceId\n\t\t[string]$VirtualMachineName = $VirtualMachineResourceId.name.Split('/')[8]\n\t\t[string]$VirtualMachineResourceGroupName = $VirtualMachineResourceId.Split('/')[4]\n\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $VirtualMachineResourceGroupName + '/providers/Microsoft.Compute/virtualMachines/' + $VirtualMachineName + '?api-version=2024-03-01&$expand=instanceView'\n\t\t$VirtualMachine = Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri\n\n\t\t# Throw an error if the virtual machine for the session host does not exist\n\t\tif ($VirtualMachine.error)\n\t\t{\n\t\t\tthrow \"The virtual machine for session host '$VirtualMachineName' does not exist\"\n\t\t}\n\t\t# Ignore session hosts tagged for maintenance or missing virtual machine\n\t\telseif($VirtualMachine.tags.Keys -contains $MaintenanceTagName)\n        {\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"VM '$VirtualMachineName' is in maintenance and will be ignored\"\n\t\t\tcontinue\n\t\t}\n\t\telse \n\t\t{\n\t\t\t$VMs.Add($VirtualMachine)\n\t\t}\n\n\t\t$PowerState = $VirtualMachine.properties.instanceView.statuses[1].displayStatus\n\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Session host: '$($VirtualMachineName)', power state: '$PowerState', status: '$($SessionHost.properties.status)', update state: '$($SessionHost.properties.updateState)', sessions: $($SessionHost.properties.sessions), allow new session: $($SessionHost.properties.allowNewSession)\"\n\t\t\n\t\t# Get the number of cores for VM size SKU\n\t\tif (!$VMSizeCores.ContainsKey($VirtualMachine.properties.hardwareProfile.vmSize))\n        {\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Get all VM sizes in location: $($VirtualMachine.location)\"\n\n\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/providers/Microsoft.Compute/locations/' + $VirtualMachine.location + '/vmSizes?api-version=2024-03-01'\n\t\t\t$VMSizes = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).value\n\n\t\t\tforeach ($VMSize in $VMSizes)\n            {\n\t\t\t\tif (!$VMSizeCores.ContainsKey($VMSize.name))\n                {\n\t\t\t\t\t$VMSizeCores.Add($VMSize.name, $VMSize.numberOfCores)\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\tif ($PowerState -ieq 'VM running')\n        {\n\t\t\tif ($SessionHost.properties.status -notin $DesiredRunningStates)\n            {\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message 'VM is in running state but session host is not and so it will be ignored (this could be because the VM was just started and has not connected to broker yet)'\n\t\t\t}\n\t\t\tif (!$SessionHost.properties.allowNewSession)\n            {\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message 'VM is in running state but session host is not allowing new sessions and so it will be ignored'\n\t\t\t}\n\n\t\t\tif ($SessionHost.properties.status -in $DesiredRunningStates -and $SessionHost.properties.allowNewSession)\n            {\n\t\t\t\t++$nRunningVMs\n\t\t\t\t$nRunningCores += $VMSizeCores[$VirtualMachine.properties.hardwareProfile.vmSize]\n\t\t\t\t$nUserSessionsFromAllRunningVMs += $SessionHost.properties.sessions\n\t\t\t}\n\t\t}\n\t\telse \n        {\n\t\t\tif ($SessionHost.properties.status -in $DesiredRunningStates)\n            {\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"VM is not in running state but session host is (this could be because the VM was just stopped and broker doesn't know that yet)\"\n\t\t\t}\n\t\t}\n\t}\n\n\tif ($nUserSessionsFromAllRunningVMs -ne $nUserSessions)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Sum of user sessions reported by every running session host ($nUserSessionsFromAllRunningVMs) is not equal to the total number of user sessions reported by the host pool ($nUserSessions)\"\n\t}\n\n\n\tif (!$nRunningCores)\n    {\n\t\t$nRunningCores = 1\n\t}\n\n\tWrite-Log -HostPoolName $HostPoolName -Message \"Number of running session hosts: $nRunningVMs of total $($VMs.Count)\"\n\tWrite-Log -HostPoolName $HostPoolName -Message \"Number of user sessions: $nUserSessions of total allowed $($nRunningVMs * $HostPool.properties.maxSessionLimit)\"\n\tWrite-Log -HostPoolName $HostPoolName -Message \"Number of user sessions per Core: $($nUserSessions / $nRunningCores), threshold: $SessionThresholdPerCPU\"\n\tWrite-Log -HostPoolName $HostPoolName -Message \"Minimum number of running session hosts required: $MinimumNumberOfRDSH\"\n\n\t# Check if minimum num of running session hosts required is higher than max allowed\n\tif ($VMs.Count -le $MinimumNumberOfRDSH)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message 'Minimum number of RDSH is set higher than or equal to total number of session hosts'\n\t}\n\t#endregion\n\n\n\t#region determine number of session hosts to start/stop if any\n\t# Now that we have all the info about the session hosts & their usage, figure how many session hosts to start/stop depending on in/off peak hours and the demand [Ops = operations to perform]\n\t$Ops = @{\n\t\tnVMsToStart   = 0\n\t\tnCoresToStart = 0\n\t\tnVMsToStop    = 0\n\t}\n\n\tSet-nVMsToStartOrStop -HostPoolName $HostPoolName -nRunningVMs $nRunningVMs -nRunningCores $nRunningCores -nUserSessions $nUserSessions -MaxUserSessionsPerVM $HostPool.properties.maxSessionLimit -InPeakHours:$InPeakHours -Res $Ops\n\t#endregion\n\n\n\t#region start any session hosts if need to\n\t# Check if we have any session hosts to start\n\tif ($Ops.nVMsToStart -or $Ops.nCoresToStart)\n    {\n\t\tif ($nRunningVMs -eq $VMs.Count)\n        {\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message 'All session hosts are running'\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message 'End'\n\t\t\treturn\n\t\t}\n\n\t\t# Object that contains names of session hosts that will be started\n\t\t# $StartSessionHostFullNames = @{ }\n\t\t# Array that contains jobs of starting the session hosts\n\t\t[array]$StartedVMs = @()\n\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'Find session hosts that are stopped and allowing new sessions'\n\t\tforeach ($SessionHost in $SessionHosts)\n        {\n\t\t\t$VM = $VMs | Where-Object { $_.id -ieq $SessionHost.properties.resourceId }\n\t\t\tif (!$Ops.nVMsToStart -and !$Ops.nCoresToStart)\n            {\n\t\t\t\t# Done with starting session hosts that needed to be\n\t\t\t\tbreak\n\t\t\t}\n\t\t\tif ($VM.properties.instanceView.statuses[1].displayStatus -ieq 'VM running')\n            {\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tif ($SessionHost.properties.updateState -ine 'Succeeded')\n            {\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Session host '$($VM.name)' may not be healthy\"\n\t\t\t}\n\n\t\t\tif (!$SessionHost.properties.allowNewSession)\n            {\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Session host '$($VM.name)' is not allowing new sessions and so it will not be started\"\n\t\t\t\tcontinue\n\t\t\t}\n\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Start session host '$($VM.name)'\"\n\t\t\tif ($PSCmdlet.ShouldProcess($VM.name, 'Start session host'))\n            {\n\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VM.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VM.name + '/start?api-version=2023-09-01'\n\t\t\t\tInvoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri\n\t\t\t\t$StartedVMs += [PSCustomObject]@{\n\t\t\t\t\tName = $VM.name\n\t\t\t\t\tResourceGroupName = $VM.id.Split('/')[4]\n\t\t\t\t}\n\t\t\t\t\n\t\t\t}\n\n\t\t\t--$Ops.nVMsToStart\n\t\t\tif ($Ops.nVMsToStart -lt 0)\n            {\n\t\t\t\t$Ops.nVMsToStart = 0\n\t\t\t}\n\n\t\t\t$Ops.nCoresToStart -= $VMSizeCores[$VM.Instance.properties.hardwareProfile.vmSize]\n\t\t\tif ($Ops.nCoresToStart -lt 0)\n            {\n\t\t\t\t$Ops.nCoresToStart = 0\n\t\t\t}\n\t\t}\n\n\t\t# Check if there were enough number of session hosts to start\n\t\tif ($Ops.nVMsToStart -or $Ops.nCoresToStart)\n        {\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Not enough session hosts to start. Still need to start maximum of either $($Ops.nVMsToStart) VMs or $($Ops.nCoresToStart) cores\"\n\t\t}\n\n\t\t# Wait for session hosts to start\n\t\twhile($StartedVMs.Count -gt 0)\n\t\t{\n\t\t\tforeach($StartedVM in $StartedVMs)\n\t\t\t{\n\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $StartedVM.ResourceGroupName + '/providers/Microsoft.Compute/virtualMachines/' + $StartedVM.Name + '?api-version=2024-03-01'\n\t\t\t\t$VMAgentStatus = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).properties.instanceView.vmAgent\n\t\t\t\tif ($VMAgentStatus)\n\t\t\t\t{\n\t\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Session host '$StartedVM' is running\"\n\t\t\t\t\t$StartedVMs = $StartedVMs -ne $StartedVM\n\t\t\t\t}\n\t\t\t}\n\t\t\tStart-Sleep -Seconds 30\n\t\t}\n\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'All session hosts have started'\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'End'\n\t\treturn\n\t}\n\t#endregion\n\n\n\t#region stop any session hosts if need to\n\tif (!$Ops.nVMsToStop)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'No need to start/stop any session hosts'\n\t\tWrite-Log -HostPoolName $HostPoolName -Message 'End'\n\t\treturn\n\t}\n\n\t# Object that contains names of session hosts that will be stopped\n\t$VMsToStop = @{}\n\t[array]$VMsToStopAfterLogOffTimeOut = @()\n\n\tWrite-Log -HostPoolName $HostPoolName -Message 'Find session hosts that are running and allowing new sessions, sort them by number of user sessions'\n\tforeach ($SessionHost in ($SessionHosts | Where-Object { $_.properties.allowNewSession } | Sort-Object { $_.properties.sessions }))\n    {\n\t\t$VM = $VMs | Where-Object { $_.id -ieq $SessionHost.properties.resourceId }\n\t\tif ($VM.properties.instanceView.statuses[1].displayStatus -ine 'VM running')\n\t\t{\n\t\t\tif (!$Ops.nVMsToStop)\n\t\t\t{\n\t\t\t\t# Done with stopping session hosts that needed to be\n\t\t\t\tbreak\n\t\t\t}\n\t\t\t\n\t\t\tif ($SessionHost.properties.sessions -gt 0 -and !$LimitSecondsToForceLogOffUser)\n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Session host '$($VM.name)' has $($SessionHost.properties.sessions) sessions but limit seconds to force log off user is set to 0, so will not stop any more session hosts (https://aka.ms/wvdscale#how-the-scaling-tool-works)\"\n\t\t\t\t# Note: why break ? Because the list this loop iterates through is sorted by number of sessions, if it hits this, the rest of items in the loop will also hit this\n\t\t\t\tbreak\n\t\t\t}\n\n\t\t\tTryUpdateSessionHostDrainMode -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost $SessionHost -SubscriptionId $SubscriptionId -VM $VM -AllowNewSession:$false\n\n\t\t\t# Note: check if there were new user sessions since session host info was 1st fetched\n\t\t\tif ($SessionHost.properties.sessions -gt 0 -and !$LimitSecondsToForceLogOffUser)\n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Session host '$($VM.name)' has $($SessionHost.properties.sessions) sessions but limit seconds to force log off user is set to 0, so will not stop any more session hosts (https://aka.ms/wvdscale#how-the-scaling-tool-works)\"\n\t\t\t\tTryUpdateSessionHostDrainMode -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost $SessionHost -SubscriptionId $SubscriptionId -VM $VM -AllowNewSession:$true\n\t\t\t\tcontinue\n\t\t\t}\n\n\t\t\tif ($SessionHost.properties.sessions -gt 0)\n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Get all user sessions from session host '$($VM.name)'\"\n\t\t\t\ttry \n\t\t\t\t{\n\t\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $VM.name + '/userSessions?api-version=2022-02-10-preview'\n\t\t\t\t\t$UserSessions = @(Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri)\n\t\t\t\t}\n\t\t\t\tcatch \n\t\t\t\t{\n\t\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Failed to retrieve user sessions of session host '$($VM.name)': $($PSItem | Format-List -Force | Out-String)\"\n\t\t\t\t}\n\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Send log off message to active user sessions on session host: '$($VM.name)'\"\n\t\t\t\tforeach ($UserSession in $UserSessions) \n\t\t\t\t{\n\t\t\t\t\tif($UserSession.properties.sessionState -ine 'Active')\n\t\t\t\t\t{\n\t\t\t\t\t\tcontinue\n\t\t\t\t\t}\n\n\t\t\t\t\t[string]$SessionID = $UserSession.name.Split('/')[-1]\n\t\t\t\t\t[string]$User = $UserSession.properties.activeDirectoryUserName\n\t\t\t\t\t\n\t\t\t\t\ttry \n\t\t\t\t\t{\n\t\t\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Send a log off message to user: '$User', session ID: $SessionID\"\n\t\t\t\t\t\tif ($PSCmdlet.ShouldProcess($SessionID, 'Send a log off message to user with session ID'))\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $VM.name + '/userSessions/' + $SessionID + '/sendMessage?api-version=2022-02-10-preview'\n\t\t\t\t\t\t\tInvoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri -Body (@{ 'messageTitle' = $LogOffMessageTitle; 'messageBody' = \"$LogOffMessageBody You will be logged off in $LimitSecondsToForceLogOffUser seconds\" } | ConvertTo-Json)\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tcatch \n\t\t\t\t\t{\n\t\t\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Failed to send a log off message to user: '$User', session ID: $SessionID $($PSItem | Format-List -Force | Out-String)\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\t$VMsToStopAfterLogOffTimeOut += $VM\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Stop session host '$($VM.name)'\"\n\t\t\t\tif ($PSCmdlet.ShouldProcess($VM.name, 'Stop session host'))\n\t\t\t\t{\n\t\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VM.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VM.name + '/deallocate?api-version=2023-09-01'\n\t\t\t\t\tInvoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri\n\t\t\t\t\t$VMsToStop += $VM\n\t\t\t\t}\n\t\t\t}\n\n\t\t\t--$Ops.nVMsToStop\n\t\t\tif ($Ops.nVMsToStop -lt 0) {\n\t\t\t\t$Ops.nVMsToStop = 0\n\t\t\t}\n\t\t}\n\t}\n\n\tif ($VMsToStopAfterLogOffTimeOut)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Wait $LimitSecondsToForceLogOffUser seconds for users to log off\"\n\t\tif ($PSCmdlet.ShouldProcess(\"for $LimitSecondsToForceLogOffUser seconds\", 'Wait for users to log off'))\n        {\n\t\t\tStart-Sleep -Seconds $LimitSecondsToForceLogOffUser\n\t\t}\n\n\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Force log off users and stop remaining $($VMsToStopAfterLogOffTimeOut.Count) session hosts\"\n\t\tforeach ($VM in $VMsToStopAfterLogOffTimeOut)\n        {\n\t\t\t$SessionHost = $SessionHosts | Where-Object { $_.properties.resourceId -ieq $VM.id }\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Force log off $($SessionHost.sessions) users on session host: '$($VM.name)'\"\n\t\t\t$VM.UserSessions | TryForceLogOffUser -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SubscriptionId $SubscriptionId\n\t\t\t\n\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Stop session host '$($VM.name)'\"\n\t\t\tif ($PSCmdlet.ShouldProcess($VM.name, 'Stop session host'))\n            {\n\t\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VM.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VM.name + '/deallocate?api-version=2023-09-01'\n\t\t\t\tInvoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri\n\t\t\t\t$VMsToStop += $VM\n\t\t\t}\n\t\t}\n\t}\n\n\t# Check if there were enough number of session hosts to stop\n\tif ($Ops.nVMsToStop)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Warn -Message \"Not enough session hosts to stop. Still need to stop $($Ops.nVMsToStop) VMs\"\n\t}\n\n\t# Wait for the session hosts to stop / deallocate\n\tWrite-Log -HostPoolName $HostPoolName -Message \"Wait for session hosts to stop / deallocate\"\n\twhile($VMsToStop.Count -gt 0)\n\t{\n\t\tforeach($VMToStop in $VMsToStop)\n\t\t{\n\t\t\t$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VMToStop.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VMToStop.name + '?api-version=2024-03-01'\n\t\t\t$VMPowerState = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).properties.instanceView.statuses[1].displayStatus\n\t\t\tif ($VMPowerState -eq 'VM deallocated')\n\t\t\t{\n\t\t\t\tWrite-Log -HostPoolName $HostPoolName -Message \"Session host '$($VMToStop.name)' is running\"\n\t\t\t\tTryResetSessionHostDrainModeAndUserSessions -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost ($SessionHosts | Where-Object { $_.properties.resourceId -ieq $VMToStop.id }) -SubscriptionId $SubscriptionId -VM $VMToStop\n\t\t\t\t$VMsToStop = $VMsToStop -ne $VMToStop\n\t\t\t}\n\t\t}\n\t\tStart-Sleep -Seconds 30\n\t}\n\n\tWrite-Log -HostPoolName $HostPoolName -Message 'All session hosts have stopped.'\n\tWrite-Log -HostPoolName $HostPoolName -Message 'End'\n\treturn\n\t#endregion\n}\ncatch \n{\n\t$ErrContainer = $PSItem\n\t# $ErrContainer = $_\n\n\t[string]$ErrMsg = $ErrContainer | Format-List -Force | Out-String\n\t$ErrMsg += \"Version: $Version`n\"\n\n\tif (Get-Command 'Write-Log' -ErrorAction:SilentlyContinue)\n    {\n\t\tWrite-Log -HostPoolName $HostPoolName -Err -Message $ErrMsg -ErrorAction:Continue\n\t}\n\telse\n    {\n\t\tWrite-Error $ErrMsg -ErrorAction:Continue\n\t}\n\n\tthrow [System.Exception]::new($ErrMsg, $ErrContainer.Exception)\n}",
     "$fxv#3": "# Authentication is provided in the script",
+    "actionGroupName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-aisd', variables('resourceTypes').actionGroups))]",
     "applicationInsightsName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').applicationInsights)]",
     "appServicePlanName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').appServicePlans)]",
     "fileShareName": "function-app",
@@ -602,8 +620,11 @@
     "keyVaultName": "[replace(replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').keyVaults), '-', '')]",
     "locations": "[variables('$fxv#0')[environment().name]]",
     "namingConvention": "[format('{0}-resourceType-scaling-avd-{1}-{2}', parameters('identifier'), parameters('environmentAbbreviation'), variables('locations')[parameters('location')].abbreviation)]",
+    "networkInterfaceName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-subType', variables('resourceTypes').networkInterfaces))]",
+    "privateEndpointName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-subType', variables('resourceTypes').privateEndpoints))]",
     "resourceTypes": "[variables('$fxv#1')]",
     "roleAssignments": "[if(equals(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')), createArray(parameters('hostPoolResourceGroupName')), createArray(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')))]",
+    "smartDetectorAlertRuleName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-failure-anomalies', variables('resourceTypes').smartDetectorAlertRules))]",
     "storageAccountName": "[replace(replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').storageAccounts), '-', '')]",
     "userAssignedIdentityName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').userAssignedIdentities)]"
   },
@@ -659,14 +680,14 @@
     {
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
-      "name": "[format('pe-{0}', variables('keyVaultName'))]",
+      "name": "[replace(variables('privateEndpointName'), 'subType', 'kv')]",
       "location": "[parameters('location')]",
       "tags": "[if(contains(parameters('tags'), 'Microsoft.Network/privateEndpoints'), parameters('tags')['Microsoft.Network/privateEndpoints'], createObject())]",
       "properties": {
-        "customNetworkInterfaceName": "[format('nic-{0}', variables('keyVaultName'))]",
+        "customNetworkInterfaceName": "[replace(variables('networkInterfaceName'), 'subType', 'kv')]",
         "privateLinkServiceConnections": [
           {
-            "name": "[format('pe-{0}', variables('keyVaultName'))]",
+            "name": "[replace(variables('privateEndpointName'), 'subType', 'kv')]",
             "properties": {
               "privateLinkServiceId": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
               "groupIds": [
@@ -676,7 +697,7 @@
           }
         ],
         "subnet": {
-          "id": "[parameters('subnetResourceId')]"
+          "id": "[parameters('privateEndpointsSubnetResourceId')]"
         }
       },
       "dependsOn": [
@@ -686,7 +707,7 @@
     {
       "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
       "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', format('pe-{0}', variables('keyVaultName')), variables('keyVaultName'))]",
+      "name": "[format('{0}/{1}', replace(variables('privateEndpointName'), 'subType', 'kv'), variables('keyVaultName'))]",
       "properties": {
         "privateDnsZoneConfigs": [
           {
@@ -698,7 +719,7 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('keyVaultName')))]"
+        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'kv'))]"
       ]
     },
     {
@@ -856,14 +877,14 @@
     {
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
-      "name": "[format('pe-blob-{0}', variables('storageAccountName'))]",
+      "name": "[replace(variables('privateEndpointName'), 'subType', 'blob-st')]",
       "location": "[parameters('location')]",
       "tags": "[if(contains(parameters('tags'), 'Microsoft.Network/privateEndpoints'), parameters('tags')['Microsoft.Network/privateEndpoints'], createObject())]",
       "properties": {
-        "customNetworkInterfaceName": "[format('nic-blob-{0}', variables('storageAccountName'))]",
+        "customNetworkInterfaceName": "[replace(variables('networkInterfaceName'), 'subType', 'blob-st')]",
         "privateLinkServiceConnections": [
           {
-            "name": "[format('pe-blob-{0}', variables('storageAccountName'))]",
+            "name": "[replace(variables('privateEndpointName'), 'subType', 'blob-st')]",
             "properties": {
               "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
               "groupIds": [
@@ -873,7 +894,7 @@
           }
         ],
         "subnet": {
-          "id": "[parameters('subnetResourceId')]"
+          "id": "[parameters('privateEndpointsSubnetResourceId')]"
         }
       },
       "dependsOn": [
@@ -883,7 +904,7 @@
     {
       "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
       "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', format('pe-blob-{0}', variables('storageAccountName')), variables('storageAccountName'))]",
+      "name": "[format('{0}/{1}', replace(variables('privateEndpointName'), 'subType', 'blob-st'), variables('storageAccountName'))]",
       "properties": {
         "privateDnsZoneConfigs": [
           {
@@ -895,21 +916,21 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-blob-{0}', variables('storageAccountName')))]",
+        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'blob-st'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     },
     {
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
-      "name": "[format('pe-file-{0}', variables('storageAccountName'))]",
+      "name": "[replace(variables('privateEndpointName'), 'subType', 'file-st')]",
       "location": "[parameters('location')]",
       "tags": "[if(contains(parameters('tags'), 'Microsoft.Network/privateEndpoints'), parameters('tags')['Microsoft.Network/privateEndpoints'], createObject())]",
       "properties": {
-        "customNetworkInterfaceName": "[format('nic-file-{0}', variables('storageAccountName'))]",
+        "customNetworkInterfaceName": "[replace(variables('networkInterfaceName'), 'subType', 'file-st')]",
         "privateLinkServiceConnections": [
           {
-            "name": "[format('pe-file-{0}', variables('storageAccountName'))]",
+            "name": "[replace(variables('privateEndpointName'), 'subType', 'file-st')]",
             "properties": {
               "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
               "groupIds": [
@@ -919,7 +940,7 @@
           }
         ],
         "subnet": {
-          "id": "[parameters('subnetResourceId')]"
+          "id": "[parameters('privateEndpointsSubnetResourceId')]"
         }
       },
       "dependsOn": [
@@ -929,7 +950,7 @@
     {
       "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
       "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', format('pe-file-{0}', variables('storageAccountName')), variables('storageAccountName'))]",
+      "name": "[format('{0}/{1}', replace(variables('privateEndpointName'), 'subType', 'file-st'), variables('storageAccountName'))]",
       "properties": {
         "privateDnsZoneConfigs": [
           {
@@ -941,7 +962,7 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-file-{0}', variables('storageAccountName')))]",
+        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'file-st'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     },
@@ -1109,7 +1130,7 @@
           "netFrameworkVersion": "v6.0"
         },
         "clientAffinityEnabled": false,
-        "virtualNetworkSubnetId": "[parameters('subnetResourceId')]",
+        "virtualNetworkSubnetId": "[parameters('delegatedSubnetResourceId')]",
         "publicNetworkAccess": "Disabled",
         "vnetRouteAllEnabled": true,
         "httpsOnly": true,
@@ -1149,13 +1170,13 @@
     {
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
-      "name": "[format('pe-{0}', variables('functionAppName'))]",
+      "name": "[replace(variables('privateEndpointName'), 'subType', 'fa')]",
       "location": "[parameters('location')]",
       "properties": {
-        "customNetworkInterfaceName": "[format('nic-{0}', variables('functionAppName'))]",
+        "customNetworkInterfaceName": "[replace(variables('networkInterfaceName'), 'subType', 'fa')]",
         "privateLinkServiceConnections": [
           {
-            "name": "[format('pe-{0}', variables('functionAppName'))]",
+            "name": "[replace(variables('privateEndpointName'), 'subType', 'fa')]",
             "properties": {
               "privateLinkServiceId": "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
               "groupIds": [
@@ -1165,7 +1186,7 @@
           }
         ],
         "subnet": {
-          "id": "[parameters('subnetResourceId')]"
+          "id": "[parameters('privateEndpointsSubnetResourceId')]"
         }
       },
       "dependsOn": [
@@ -1175,7 +1196,7 @@
     {
       "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
       "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', format('pe-{0}', variables('functionAppName')), 'default')]",
+      "name": "[format('{0}/{1}', replace(variables('privateEndpointName'), 'subType', 'fa'), 'default')]",
       "properties": {
         "privateDnsZoneConfigs": [
           {
@@ -1187,7 +1208,57 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('functionAppName')))]"
+        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'fa'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('actionGroupName')]",
+      "location": "Global",
+      "properties": {
+        "groupShortName": "SmartDetect",
+        "enabled": true,
+        "emailReceivers": "[if(empty(parameters('distributionGroup')), createArray(), createArray(createObject('emailAddress', parameters('distributionGroup'), 'name', parameters('distributionGroup'), 'useCommonAlertSchema', true())))]",
+        "armRoleReceivers": [
+          {
+            "name": "Monitoring Contributor",
+            "roleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+            "useCommonAlertSchema": true
+          },
+          {
+            "name": "Monitoring Reader",
+            "roleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+            "useCommonAlertSchema": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "microsoft.alertsManagement/smartDetectorAlertRules",
+      "apiVersion": "2021-04-01",
+      "name": "[variables('smartDetectorAlertRuleName')]",
+      "location": "global",
+      "properties": {
+        "description": "Failure Anomalies notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls.",
+        "state": "Enabled",
+        "severity": "Sev3",
+        "frequency": "PT1M",
+        "detector": {
+          "id": "FailureAnomaliesDetector"
+        },
+        "scope": [
+          "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
+        ],
+        "actionGroups": {
+          "groupIds": [
+            "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
       ]
     },
     {

@@ -260,12 +260,24 @@
                             }
                         },
                         {
-                            "name": "subnet",
+                            "name": "delegatedSubnet",
+                            "type": "Microsoft.Common.DropDown",
+                            "visible": true,
+                            "label": "Delegated Subnet",
+                            "defaultValue": "",
+                            "toolTip": "Select the delegated subnet for that function app that provides private outbound access. The subnet must be empty.",
+                            "constraints": {
+                                "allowedValues": "[map(steps('network').subnetsApi.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.id, '\"}')))]",
+                                "required": true
+                            }
+                        },
+                        {
+                            "name": "privateEndpointsSubnet",
                             "type": "Microsoft.Common.DropDown",
                             "visible": true,
                             "label": "Subnet",
                             "defaultValue": "",
-                            "toolTip": "Select the target subnet for your AVD session hosts.",
+                            "toolTip": "Select the target subnet for the private endpoints.",
                             "constraints": {
                                 "allowedValues": "[map(steps('network').subnetsApi.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.id, '\"}')))]",
                                 "required": true
@@ -362,6 +374,19 @@
                                 "required": true
                             },
                             "options": {}
+                        },
+                        {
+                            "name": "distributionGroup",
+                            "type": "Microsoft.Common.TextBox",
+                            "visible": "[steps('monitoring').enableMonitoring]",
+                            "label": "Distribution group",
+                            "toolTip": "Input the distribution group for receiving failure anomaly alerts.",
+                            "placeholder": "Example: operations@contoso.com",
+                            "constraints": {
+                                "required": true,
+                                "regex": "^[a-z0-9A-Z_.-]+@(?:[a-z0-9]+\\.)+[a-z]+$",
+                                "validationMessage": "The value must be a valid email address."
+                            }
                         }
                     ],
                     "visible": true
@@ -395,6 +420,8 @@
                 "azureFilesPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureFiles]",
                 "azureFunctionsPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureFunctions]",
                 "beginPeakTime": "[steps('scaling').options.beginPeakTime]",
+                "delegatedSubnetResourceId": "[steps('network').delegatedSubnet]",
+                "distributionGroup": "[steps('monitoring').distributionGroup]",
                 "endPeakTime": "[steps('scaling').options.endPeakTime]",
                 "environmentAbbreviation": "[steps('basics').naming.environmentAbbreviation]",
                 "hostPoolName": "[steps('scaling').scope.hostPool.name]",
@@ -404,9 +431,9 @@
                 "limitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
                 "logAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').logAnalyticsWorkspace.id, '')]",
                 "minimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
+                "privateEndpointsSubnetResourceId": "[steps('network').privateEndpointsSubnet]",
                 "sessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
                 "sessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
-                "subnetResourceId": "[steps('network').subnet]",
                 "tags": "[steps('tags').tags]"
             },
             "kind": "ResourceGroup",
