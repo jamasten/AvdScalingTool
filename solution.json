@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "10800526981280332989"
+      "templateHash": "3029327670760412019"
     }
   },
   "parameters": {
@@ -1009,7 +1009,7 @@
       "apiVersion": "2023-01-01",
       "name": "[variables('appServicePlanName')]",
       "location": "[parameters('location')]",
-      "tags": {},
+      "tags": "[if(contains(parameters('tags'), 'Microsoft.Web/serverfarms'), parameters('tags')['Microsoft.Web/serverfarms'], createObject())]",
       "sku": {
         "tier": "ElasticPremium",
         "name": "EP1"
@@ -1221,6 +1221,7 @@
       "apiVersion": "2023-01-01",
       "name": "[variables('actionGroupName')]",
       "location": "Global",
+      "tags": "[if(contains(parameters('tags'), 'microsoft.insights/actionGroups'), parameters('tags')['microsoft.insights/actionGroups'], createObject())]",
       "properties": {
         "groupShortName": "SmartDetect",
         "enabled": true,
@@ -1244,6 +1245,7 @@
       "apiVersion": "2021-04-01",
       "name": "[variables('smartDetectorAlertRuleName')]",
       "location": "global",
+      "tags": "[if(contains(parameters('tags'), 'microsoft.alertsmanagement/smartdetectoralertrules'), parameters('tags')['microsoft.alertsmanagement/smartdetectoralertrules'], createObject())]",
       "properties": {
         "description": "Failure Anomalies notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls.",
         "state": "Enabled",

@@ -473,7 +473,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: appServicePlanName
   location: location
-  tags: {}
+  tags: contains(tags, 'Microsoft.Web/serverfarms') ? tags['Microsoft.Web/serverfarms'] : {}
   sku: {
     tier: 'ElasticPremium'
     name: 'EP1'
@@ -680,6 +680,7 @@ module roleAssignments_ResourceGroups 'modules/roleAssignments.bicep' = [
 resource actionGroup 'microsoft.insights/actionGroups@2023-01-01' = {
   name: actionGroupName
   location: 'Global'
+  tags: contains(tags, 'microsoft.insights/actionGroups') ? tags['microsoft.insights/actionGroups'] : {}
   properties: {
     groupShortName: 'SmartDetect'
     enabled: true
@@ -710,6 +711,7 @@ resource actionGroup 'microsoft.insights/actionGroups@2023-01-01' = {
 resource smartDetectorAlertRule 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = {
   name: smartDetectorAlertRuleName
   location: 'global'
+  tags: contains(tags, 'microsoft.alertsmanagement/smartdetectoralertrules') ? tags['microsoft.alertsmanagement/smartdetectoralertrules'] : {}
   properties: {
     description: 'Failure Anomalies notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls.'
     state: 'Enabled'
