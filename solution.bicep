@@ -484,6 +484,10 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
     maximumElasticWorkerCount: 20
     zoneRedundant: false
   }
+  dependsOn: [
+    privateDnsZoneGroup_storage_blob
+    privateDnsZoneGroup_storage_file
+  ]
 }
 
 resource functionApp 'Microsoft.Web/sites@2023-01-01' = {

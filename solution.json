@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "14094229925535567802"
+      "templateHash": "9348825279725845868"
     }
   },
   "parameters": {
@@ -1019,7 +1019,11 @@
         "targetWorkerCount": 1,
         "maximumElasticWorkerCount": 20,
         "zoneRedundant": false
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', replace(variables('privateEndpointName'), 'subType', 'blob-st'), variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', replace(variables('privateEndpointName'), 'subType', 'file-st'), variables('storageAccountName'))]"
+      ]
     },
     {
       "type": "Microsoft.Web/sites",
