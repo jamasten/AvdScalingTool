@@ -623,6 +623,7 @@ resource function 'Microsoft.Web/sites/functions@2020-12-01' = {
       ]
     }
     files: {
+      'requirements.psd1': loadTextContent('artifacts/requirements.psd1')
       'run.ps1': loadTextContent('artifacts/run.ps1')
       '../profile.ps1': loadTextContent('artifacts/profile.ps1')
     }
