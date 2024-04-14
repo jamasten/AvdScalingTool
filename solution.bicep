@@ -500,6 +500,10 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
     type: 'SystemAssigned'
   }
   properties: {
+    clientAffinityEnabled: false
+    httpsOnly: true
+    publicNetworkAccess: 'Disabled'
+    serverFarmId: appServicePlan.id
     siteConfig: {
       appSettings: [
         {
@@ -592,17 +596,14 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
           environment().portal
         ]
       }
-      use32BitWorkerProcess: true
       ftpsState: 'FtpsOnly'
-      powerShellVersion: '7.2'
       netFrameworkVersion: 'v6.0'
+      powerShellVersion: '7.2'
+      use32BitWorkerProcess: true
     }
-    clientAffinityEnabled: false
     virtualNetworkSubnetId: delegatedSubnetResourceId
-    publicNetworkAccess: 'Disabled'
+    vnetContentShareEnabled: true
     vnetRouteAllEnabled: true
-    httpsOnly: true
-    serverFarmId: appServicePlan.id
   }
 }
 
