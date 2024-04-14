@@ -1,56 +1,22 @@
-﻿[CmdletBinding(SupportsShouldProcess)]
-param(
-	[Parameter(Mandatory)]
-	[string]$BeginPeakTime,
-
-	[Parameter(Mandatory)]
-	[string]$EndPeakTime,
-
-	[Parameter(Mandatory)]
-	[string]$EnvironmentName,
-
-	[Parameter(Mandatory)]
-	[string]$HostPoolName,
-
-	[Parameter(Mandatory)]
-	[string]$HostPoolResourceGroupName,
-
-	[Parameter(Mandatory)]
-	[int]$LimitSecondsToForceLogOffUser,
-
-	[Parameter(Mandatory)]
-	[string]$LogOffMessageBody,
-
-	[Parameter(Mandatory)]
-	[string]$LogOffMessageTitle,
-
-	[Parameter(Mandatory)]
-	[string]$MaintenanceTagName,
-
-	[Parameter(Mandatory)]
-	[int]$MinimumNumberOfRDSH,
-
-	[Parameter(Mandatory)]
-	[string]$ResourceManagerUrl,
-
-	[Parameter(Mandatory)]
-	[double]$SessionThresholdPerCPU,
-
-	[Parameter(Mandatory)]
-	[string]$SubscriptionId,
-
-    [Parameter(Mandatory)]
-	[string]$TenantId,
-
-	[Parameter(Mandatory)]
-	[string]$TimeDifference,
-
-	[Parameter(Mandatory)]
-	[string]$Timer
-)
+﻿param($Timer)
 
 try
 {
+	[string]$BeginPeakTime = $env:BeginPeakTime
+	[string]$EndPeakTime = $env:EndPeakTime
+	[string]$EnvironmentName = $env:EnvironmentName
+	[string]$HostPoolName = $env:HostPoolName
+	[string]$HostPoolResourceGroupName = $env:HostPoolResourceGroupName
+	[int]$LimitSecondsToForceLogOffUser = $env:LimitSecondsToForceLogOffUser
+	[string]$LogOffMessageBody = $env:LogOffMessageBody
+	[string]$LogOffMessageTitle = $env:LogOffMessageTitle
+	[string]$MaintenanceTagName = $env:MaintenanceTagName
+	[int]$MinimumNumberOfRDSH = $env:MinimumNumberOfRDSH
+	[string]$ResourceManagerUrl = $env:ResourceManagerUrl
+	[double]$SessionThresholdPerCPU = $env:SessionThresholdPerCPU
+	[string]$SubscriptionId = $env:SubscriptionId
+	[string]$TenantId = $env:TenantId
+	[string]$TimeDifference = $env:TimeDifference
 	[string[]]$DesiredRunningStates = @('Available', 'NeedsAssistance')
 	[string[]]$TimeDiffHrsMin = "$($TimeDifference):0".Split(':')
 
