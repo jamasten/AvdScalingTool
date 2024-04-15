@@ -28,7 +28,7 @@
                         },
                         {
                             "name": "naming",
-                            "label": "Mission Landing Zone Name",
+                            "label": "Components for Naming Convention",
                             "type": "Microsoft.Common.Section",
                             "elements": [
                                 {
