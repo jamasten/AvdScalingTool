@@ -336,6 +336,32 @@
                                     }
                                 },
                                 {
+                                    "name": "azureQueues",
+                                    "type": "Microsoft.Common.DropDown",
+                                    "visible": true,
+                                    "label": "Azure Queues",
+                                    "defaultValue": "",
+                                    "multiLine": true,
+                                    "toolTip": "Select the existing Private DNS Zone for Azure Files.",
+                                    "constraints": {
+                                        "required": true,
+                                        "allowedValues": "[map(filter(steps('network').privateDnsZones.api.value, (item) => contains(item.name, 'privatelink.queue.')), (item) => parse(concat('{\"label\":\"', item.name, '\",\"description\":\"Resource group: ', first(skip(split(item.id, '/'), 4)), '\",\"value\":\"', item.id, '\"}')))]"
+                                    }
+                                },
+                                {
+                                    "name": "azureTables",
+                                    "type": "Microsoft.Common.DropDown",
+                                    "visible": true,
+                                    "label": "Azure Tables",
+                                    "defaultValue": "",
+                                    "multiLine": true,
+                                    "toolTip": "Select the existing Private DNS Zone for Azure Files.",
+                                    "constraints": {
+                                        "required": true,
+                                        "allowedValues": "[map(filter(steps('network').privateDnsZones.api.value, (item) => contains(item.name, 'privatelink.table.')), (item) => parse(concat('{\"label\":\"', item.name, '\",\"description\":\"Resource group: ', first(skip(split(item.id, '/'), 4)), '\",\"value\":\"', item.id, '\"}')))]"
+                                    }
+                                },
+                                {
                                     "name": "keyVault",
                                     "type": "Microsoft.Common.DropDown",
                                     "visible": true,
@@ -419,6 +445,8 @@
                 "azureBlobsPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureBlobs]",
                 "azureFilesPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureFiles]",
                 "azureFunctionsPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureFunctions]",
+                "azureQueuesPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureQueues]",
+                "azureTablesPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureTables]",
                 "beginPeakTime": "[steps('scaling').options.beginPeakTime]",
                 "delegatedSubnetResourceId": "[steps('network').delegatedSubnet]",
                 "distributionGroup": "[steps('monitoring').distributionGroup]",
