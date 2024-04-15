@@ -7,6 +7,12 @@ param azureFilesPrivateDnsZoneResourceId string
 @description('The resource ID of the private DNS zone for Azure Functions.')
 param azureFunctionsPrivateDnsZoneResourceId string
 
+@description('The resource ID of the private DNS zone for Azure Queues.')
+param azureQueuesPrivateDnsZoneResourceId string
+
+@description('The resource ID of the private DNS zone for Azure Tables.')
+param azureTablesPrivateDnsZoneResourceId string
+
 @allowed([
   '00:00'
   '01:00'
@@ -145,6 +151,18 @@ var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
     ]
 var smartDetectorAlertRuleName = replace(namingConvention, 'resourceType', '${resourceTypes.smartDetectorAlertRules}-failure-anomalies')
 var storageAccountName = replace(replace(namingConvention, 'resourceType', resourceTypes.storageAccounts), '-', '')
+var storagePrivateDnsZoneResourceIds = [
+  azureBlobsPrivateDnsZoneResourceId
+  azureFilesPrivateDnsZoneResourceId
+  azureQueuesPrivateDnsZoneResourceId
+  azureTablesPrivateDnsZoneResourceId
+]
+var storageSubResources = [
+  'blob'
+  'file'
+  'queue'
+  'table'
+]
 var userAssignedIdentityName = replace(namingConvention, 'resourceType', resourceTypes.userAssignedIdentities)
 
 resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
@@ -363,15 +381,15 @@ resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01
   }
 }
 
-resource privateEndpoint_storage_blob 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: replace(privateEndpointName, 'subType', 'blob-st')
+resource privateEndpoints_storage 'Microsoft.Network/privateEndpoints@2023-04-01' = [ for resource in storageSubResources: {
+  name: replace(privateEndpointName, 'subType', '${resource}-st')
   location: location
   tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
   properties: {
-    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', 'blob-st')
+    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', '${resource}-st')
     privateLinkServiceConnections: [
       {
-        name: replace(privateEndpointName, 'subType', 'blob-st')
+        name: replace(privateEndpointName, 'subType', '${resource}-st')
         properties: {
           privateLinkServiceId: storageAccount.id
           groupIds: [
@@ -384,60 +402,23 @@ resource privateEndpoint_storage_blob 'Microsoft.Network/privateEndpoints@2023-0
       id: privateEndpointsSubnetResourceId
     }
   }
-}
+}]
 
-resource privateDnsZoneGroup_storage_blob 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2021-08-01' = {
-  parent: privateEndpoint_storage_blob
+resource privateDnsZoneGroups_storage 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2021-08-01' = [for (resource, i) in storageSubResources: {
+  parent: privateEndpoints_storage[i]
   name: storageAccount.name
   properties: {
     privateDnsZoneConfigs: [
       {
         name: 'ipconfig1'
         properties: {
-          privateDnsZoneId: azureBlobsPrivateDnsZoneResourceId
+          #disable-next-line use-resource-id-functions
+          privateDnsZoneId: storagePrivateDnsZoneResourceIds[i]
         }
       }
     ]
   }
-}
-
-resource privateEndpoint_storage_file 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: replace(privateEndpointName, 'subType', 'file-st')
-  location: location
-  tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
-  properties: {
-    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', 'file-st')
-    privateLinkServiceConnections: [
-      {
-        name: replace(privateEndpointName, 'subType', 'file-st')
-        properties: {
-          privateLinkServiceId: storageAccount.id
-          groupIds: [
-            'file'
-          ]
-        }
-      }
-    ]
-    subnet: {
-      id: privateEndpointsSubnetResourceId
-    }
-  }
-}
-
-resource privateDnsZoneGroup_storage_file 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2021-08-01' = {
-  parent: privateEndpoint_storage_file
-  name: storageAccount.name
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          privateDnsZoneId: azureFilesPrivateDnsZoneResourceId
-        }
-      }
-    ]
-  }
-}
+}]
 
 resource diagnosticSetting_storage_blob 'Microsoft.Insights/diagnosticsettings@2017-05-01-preview' =
   if (!empty(logAnalyticsWorkspaceResourceId)) {
@@ -486,8 +467,8 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
     zoneRedundant: false
   }
   dependsOn: [
-    privateDnsZoneGroup_storage_blob
-    privateDnsZoneGroup_storage_file
+    privateEndpoints_storage
+    privateDnsZoneGroups_storage
   ]
 }
 

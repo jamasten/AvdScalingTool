@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "1605286036327236485"
+      "templateHash": "7860488346968174732"
     }
   },
   "parameters": {
@@ -25,6 +25,18 @@
       "type": "string",
       "metadata": {
         "description": "The resource ID of the private DNS zone for Azure Functions."
+      }
+    },
+    "azureQueuesPrivateDnsZoneResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "The resource ID of the private DNS zone for Azure Queues."
+      }
+    },
+    "azureTablesPrivateDnsZoneResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "The resource ID of the private DNS zone for Azure Tables."
       }
     },
     "beginPeakTime": {
@@ -629,6 +641,18 @@
     "roleAssignments": "[if(equals(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')), createArray(parameters('hostPoolResourceGroupName')), createArray(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')))]",
     "smartDetectorAlertRuleName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-failure-anomalies', variables('resourceTypes').smartDetectorAlertRules))]",
     "storageAccountName": "[replace(replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').storageAccounts), '-', '')]",
+    "storagePrivateDnsZoneResourceIds": [
+      "[parameters('azureBlobsPrivateDnsZoneResourceId')]",
+      "[parameters('azureFilesPrivateDnsZoneResourceId')]",
+      "[parameters('azureQueuesPrivateDnsZoneResourceId')]",
+      "[parameters('azureTablesPrivateDnsZoneResourceId')]"
+    ],
+    "storageSubResources": [
+      "blob",
+      "file",
+      "queue",
+      "table"
+    ],
     "userAssignedIdentityName": "[replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').userAssignedIdentities)]"
   },
   "resources": [
@@ -878,16 +902,20 @@
       ]
     },
     {
+      "copy": {
+        "name": "privateEndpoints_storage",
+        "count": "[length(variables('storageSubResources'))]"
+      },
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
-      "name": "[replace(variables('privateEndpointName'), 'subType', 'blob-st')]",
+      "name": "[replace(variables('privateEndpointName'), 'subType', format('{0}-st', variables('storageSubResources')[copyIndex()]))]",
       "location": "[parameters('location')]",
       "tags": "[if(contains(parameters('tags'), 'Microsoft.Network/privateEndpoints'), parameters('tags')['Microsoft.Network/privateEndpoints'], createObject())]",
       "properties": {
-        "customNetworkInterfaceName": "[replace(variables('networkInterfaceName'), 'subType', 'blob-st')]",
+        "customNetworkInterfaceName": "[replace(variables('networkInterfaceName'), 'subType', format('{0}-st', variables('storageSubResources')[copyIndex()]))]",
         "privateLinkServiceConnections": [
           {
-            "name": "[replace(variables('privateEndpointName'), 'subType', 'blob-st')]",
+            "name": "[replace(variables('privateEndpointName'), 'subType', format('{0}-st', variables('storageSubResources')[copyIndex()]))]",
             "properties": {
               "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
               "groupIds": [
@@ -905,67 +933,25 @@
       ]
     },
     {
+      "copy": {
+        "name": "privateDnsZoneGroups_storage",
+        "count": "[length(variables('storageSubResources'))]"
+      },
       "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
       "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', replace(variables('privateEndpointName'), 'subType', 'blob-st'), variables('storageAccountName'))]",
+      "name": "[format('{0}/{1}', replace(variables('privateEndpointName'), 'subType', format('{0}-st', variables('storageSubResources')[copyIndex()])), variables('storageAccountName'))]",
       "properties": {
         "privateDnsZoneConfigs": [
           {
             "name": "ipconfig1",
             "properties": {
-              "privateDnsZoneId": "[parameters('azureBlobsPrivateDnsZoneResourceId')]"
+              "privateDnsZoneId": "[variables('storagePrivateDnsZoneResourceIds')[copyIndex()]]"
             }
           }
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'blob-st'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Network/privateEndpoints",
-      "apiVersion": "2023-04-01",
-      "name": "[replace(variables('privateEndpointName'), 'subType', 'file-st')]",
-      "location": "[parameters('location')]",
-      "tags": "[if(contains(parameters('tags'), 'Microsoft.Network/privateEndpoints'), parameters('tags')['Microsoft.Network/privateEndpoints'], createObject())]",
-      "properties": {
-        "customNetworkInterfaceName": "[replace(variables('networkInterfaceName'), 'subType', 'file-st')]",
-        "privateLinkServiceConnections": [
-          {
-            "name": "[replace(variables('privateEndpointName'), 'subType', 'file-st')]",
-            "properties": {
-              "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-              "groupIds": [
-                "file"
-              ]
-            }
-          }
-        ],
-        "subnet": {
-          "id": "[parameters('privateEndpointsSubnetResourceId')]"
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
-      "apiVersion": "2021-08-01",
-      "name": "[format('{0}/{1}', replace(variables('privateEndpointName'), 'subType', 'file-st'), variables('storageAccountName'))]",
-      "properties": {
-        "privateDnsZoneConfigs": [
-          {
-            "name": "ipconfig1",
-            "properties": {
-              "privateDnsZoneId": "[parameters('azureFilesPrivateDnsZoneResourceId')]"
-            }
-          }
-        ]
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'file-st'))]",
+        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', format('{0}-st', variables('storageSubResources')[copyIndex()])))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     },
@@ -1023,8 +1009,8 @@
         "zoneRedundant": false
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', replace(variables('privateEndpointName'), 'subType', 'blob-st'), variables('storageAccountName'))]",
-        "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', replace(variables('privateEndpointName'), 'subType', 'file-st'), variables('storageAccountName'))]"
+        "privateDnsZoneGroups_storage",
+        "privateEndpoints_storage"
       ]
     },
     {
