@@ -168,7 +168,7 @@ try
 				try 
 				{
 					$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '?api-version=2022-02-10-preview'
-					$SessionHost = Invoke-RestMethod -Headers $Header -Body (@{properties = @{allowNewSession = $AllowNewSession}} | ConvertTo-Json) -Method 'Patch' -Uri $Uri
+					$SessionHost = Invoke-RestMethod -Headers $Header -Body (@{properties = @{allowNewSession = if($AllowNewSession -eq 'True'){$true}else{$false}}} | ConvertTo-Json) -Method 'Patch' -Uri $Uri
 
 					if ($SessionHost.properties.allowNewSession -ne $AllowNewSession) 
 					{
