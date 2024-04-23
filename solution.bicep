@@ -45,9 +45,6 @@ param beginPeakTime string = '08:00'
 @description('The resource ID of the target subnet delegated for outbound access for the function app.')
 param delegatedSubnetResourceId string
 
-@description('The email address of the distribution group to receive alerts.')
-param distributionGroup string = ''
-
 @allowed([
   '00:00'
   '01:00'
@@ -128,7 +125,6 @@ param tags object = {}
 @description('DO NOT MODIFY THIS VALUE! The timestamp is needed to differentiate deployments for certain Azure resources and must be set using a parameter.')
 param timestamp string = utcNow('yyyyMMddhhmmss')
 
-var actionGroupName = replace(namingConvention, 'resourceType', '${resourceTypes.actionGroups}-aisd')
 var applicationInsightsName = replace(namingConvention, 'resourceType', resourceTypes.applicationInsights)
 var appServicePlanName = replace(namingConvention, 'resourceType', resourceTypes.appServicePlans)
 var diagnosticsSettingName = replace(namingConvention, 'resourceType', '${resourceTypes.diagnosticSettings}-subType')
@@ -149,7 +145,6 @@ var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
       hostPoolResourceGroupName
       sessionHostsResourceGroupName
     ]
-var smartDetectorAlertRuleName = replace(namingConvention, 'resourceType', '${resourceTypes.smartDetectorAlertRules}-failure-anomalies')
 var storageAccountName = replace(replace(namingConvention, 'resourceType', resourceTypes.storageAccounts), '-', '')
 var storagePrivateDnsZoneResourceIds = [
   azureBlobsPrivateDnsZoneResourceId
@@ -393,7 +388,7 @@ resource privateEndpoints_storage 'Microsoft.Network/privateEndpoints@2023-04-01
         properties: {
           privateLinkServiceId: storageAccount.id
           groupIds: [
-            'blob'
+            resource
           ]
         }
       }
@@ -580,7 +575,7 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
       ftpsState: 'FtpsOnly'
       netFrameworkVersion: 'v6.0'
       powerShellVersion: '7.2'
-      use32BitWorkerProcess: true
+      use32BitWorkerProcess: false
     }
     virtualNetworkSubnetId: delegatedSubnetResourceId
     vnetContentShareEnabled: true
@@ -659,57 +654,3 @@ module roleAssignments_ResourceGroups 'modules/roleAssignments.bicep' = [
     }
   }
 ]
-
-resource actionGroup 'microsoft.insights/actionGroups@2023-01-01' = {
-  name: actionGroupName
-  location: 'Global'
-  tags: contains(tags, 'microsoft.insights/actionGroups') ? tags['microsoft.insights/actionGroups'] : {}
-  properties: {
-    groupShortName: 'SmartDetect'
-    enabled: true
-    emailReceivers: empty(distributionGroup)
-      ? []
-      : [
-          {
-            emailAddress: distributionGroup
-            name: distributionGroup
-            useCommonAlertSchema: true
-          }
-        ]
-    armRoleReceivers: [
-      {
-        name: 'Monitoring Contributor'
-        roleId: '749f88d5-cbae-40b8-bcfc-e573ddc772fa'
-        useCommonAlertSchema: true
-      }
-      {
-        name: 'Monitoring Reader'
-        roleId: '43d0d8ad-25c7-4714-9337-8ba259a9fe05'
-        useCommonAlertSchema: true
-      }
-    ]
-  }
-}
-
-resource smartDetectorAlertRule 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = {
-  name: smartDetectorAlertRuleName
-  location: 'global'
-  tags: contains(tags, 'microsoft.alertsmanagement/smartdetectoralertrules') ? tags['microsoft.alertsmanagement/smartdetectoralertrules'] : {}
-  properties: {
-    description: 'Failure Anomalies notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls.'
-    state: 'Enabled'
-    severity: 'Sev3'
-    frequency: 'PT1M'
-    detector: {
-      id: 'FailureAnomaliesDetector'
-    }
-    scope: [
-      applicationInsights.id
-    ]
-    actionGroups: {
-      groupIds: [
-        actionGroup.id
-      ]
-    }
-  }
-}
