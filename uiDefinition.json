@@ -400,19 +400,6 @@
                                 "required": true
                             },
                             "options": {}
-                        },
-                        {
-                            "name": "distributionGroup",
-                            "type": "Microsoft.Common.TextBox",
-                            "visible": "[steps('monitoring').enableMonitoring]",
-                            "label": "Distribution group",
-                            "toolTip": "Input the distribution group for receiving failure anomaly alerts.",
-                            "placeholder": "Example: operations@contoso.com",
-                            "constraints": {
-                                "required": true,
-                                "regex": "^[a-z0-9A-Z_.-]+@(?:[a-z0-9]+\\.)+[a-z]+$",
-                                "validationMessage": "The value must be a valid email address."
-                            }
                         }
                     ],
                     "visible": true
@@ -449,7 +436,6 @@
                 "azureTablesPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.azureTables]",
                 "beginPeakTime": "[steps('scaling').options.beginPeakTime]",
                 "delegatedSubnetResourceId": "[steps('network').delegatedSubnet]",
-                "distributionGroup": "[steps('monitoring').distributionGroup]",
                 "endPeakTime": "[steps('scaling').options.endPeakTime]",
                 "environmentAbbreviation": "[steps('basics').naming.environmentAbbreviation]",
                 "hostPoolName": "[steps('scaling').scope.hostPool.name]",
