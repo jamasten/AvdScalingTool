@@ -289,12 +289,6 @@ try
 	}
 	#endregion Functions
 
-	Set-ExecutionPolicy -ExecutionPolicy 'Undefined' -Scope 'Process' -Force -Confirm:$false
-	if (!$SkipAuth)
-    {
-		# Note: this requires admin priviledges
-		Set-ExecutionPolicy -ExecutionPolicy 'Unrestricted' -Scope 'LocalMachine' -Force -Confirm:$false
-	}
 
 	# Note: https://stackoverflow.com/questions/41674518/powershell-setting-security-protocol-to-tls-1-2
 	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -358,7 +352,7 @@ try
 
 	Write-Log -HostPoolName $HostPoolName -Message 'Get number of user sessions in Hostpool'
 	$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/userSessions?api-version=2022-02-10-preview'
-	[int]$nUserSessions = @(Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).Count
+	[int]$nUserSessions = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).value.Count
 
 	# Set up breadth 1st load balacing type
 	# Note: breadth 1st is enforced on AND off peak hours to simplify the things with scaling in the start/end of peak hours
@@ -421,8 +415,8 @@ try
 	[int]$nRunningVMs = 0
 	# Number of cores that are running, are in desired states and allowing new sessions
 	[int]$nRunningCores = 0
-	# Object that contains all session host objects, VM instance objects except the ones that are under maintenance
-	$VMs = @{}
+	# Array that contains all the virtual machine objects that are session hosts except the ones that are tagged for maintenance
+	$VMs = @()
 	# Object that contains the number of cores for each VM size SKU
 	$VMSizeCores = @{}
 	# Number of user sessions reported by each session host that is running, is in desired state and allowing new sessions
@@ -432,7 +426,7 @@ try
 	foreach ($SessionHost in $SessionHosts)
     {
 		[string]$VirtualMachineResourceId = $SessionHost.properties.resourceId
-		[string]$VirtualMachineName = $VirtualMachineResourceId.name.Split('/')[8]
+		[string]$VirtualMachineName = $VirtualMachineResourceId.Split('/')[8]
 		[string]$VirtualMachineResourceGroupName = $VirtualMachineResourceId.Split('/')[4]
 		$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $VirtualMachineResourceGroupName + '/providers/Microsoft.Compute/virtualMachines/' + $VirtualMachineName + '?api-version=2024-03-01&$expand=instanceView'
 		$VirtualMachine = Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri
@@ -450,7 +444,7 @@ try
 		}
 		else 
 		{
-			$VMs.Add($VirtualMachine)
+			$VMs += $VirtualMachine
 		}
 
 		$PowerState = $VirtualMachine.properties.instanceView.statuses[1].displayStatus
