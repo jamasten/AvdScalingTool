@@ -128,10 +128,10 @@ try
 
 	function TryUpdateSessionHostDrainMode
     {
-		[CmdletBinding(SupportsShouldProcess)]
+		[CmdletBinding()]
 		param (
-			[Parameter(Mandatory = $false)]
-			[switch]$AllowNewSession,
+			[Parameter(Mandatory = $true)]
+			[bool]$AllowNewSession,
 
 			[Parameter(Mandatory = $true)]
 			[hashtable]$Header,
@@ -146,39 +146,31 @@ try
 			[string]$ResourceManagerUrl,
 
 			[Parameter(Mandatory = $true)]
-			[PSCustomObject]$SessionHost,
+			[bool]$SessionHostDrainMode,
 
 			[Parameter(Mandatory = $true)]
-			[string]$SubscriptionId,
+			[string]$SessionHostName,
 
 			[Parameter(Mandatory = $true)]
-			[PSCustomObject]$VM
+			[string]$SubscriptionId
 		)
 		Begin { }
 		Process 
         {
-			if ($SessionHost.properties.allowNewSession -eq $AllowNewSession)
+			if ($SessionHostDrainMode -eq $AllowNewSession)
             {
 				return
 			}
-			[string]$SessionHostName = $VM.name
-			Write-Log -HostPoolName $HostPoolName -Message "Update session host '$SessionHostName' to set allow new sessions to $AllowNewSession"
-			if ($PSCmdlet.ShouldProcess($SessionHostName, "Update session host to set allow new sessions to $AllowNewSession"))
-            {
-				try 
-				{
-					$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '?api-version=2022-02-10-preview'
-					$SessionHost = Invoke-RestMethod -Headers $Header -Body (@{properties = @{allowNewSession = if($AllowNewSession -eq 'True'){$true}else{$false}}} | ConvertTo-Json) -Method 'Patch' -Uri $Uri
 
-					if ($SessionHost.properties.allowNewSession -ne $AllowNewSession) 
-					{
-						throw $SessionHost
-					}
-				}
-				catch
-				{
-					Write-Log -HostPoolName $HostPoolName -Warn -Message "Failed to update the session host '$SessionHostName' to set allow new sessions to $($AllowNewSession): $($PSItem | Format-List -Force | Out-String)"
-				}
+			Write-Log -HostPoolName $HostPoolName -Message "Update session host '$SessionHostName' to set allow new sessions to $AllowNewSession"
+			try 
+			{
+				$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '?api-version=2022-02-10-preview'
+				Invoke-RestMethod -Headers $Header -Body (@{properties = @{allowNewSession = $AllowNewSession}} | ConvertTo-Json) -Method 'Patch' -Uri $Uri | Out-Null
+			}
+			catch
+			{
+				Write-Log -HostPoolName $HostPoolName -Warn -Message "Failed to update the session host '$SessionHostName' to set allow new sessions to $($AllowNewSession): $($PSItem | Format-List -Force | Out-String)"
 			}
 		}
 		End { }
@@ -186,7 +178,7 @@ try
 
 	function TryForceLogOffUser
     {
-		[CmdletBinding(SupportsShouldProcess)]
+		[CmdletBinding()]
 		param (
 			[Parameter(Mandatory = $true)]
 			[hashtable]$Header,
@@ -217,11 +209,9 @@ try
 			try 
 			{
 				Write-Log -HostPoolName $HostPoolName -Message "Force log off user: '$User', session ID: $SessionID"
-				if ($PSCmdlet.ShouldProcess($SessionID, 'Force log off user with session ID'))
-				{
-					$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '/userSessions/' + $SessionID + '?api-version=2022-02-10-preview&force=True'
-					Invoke-RestMethod -Headers $Header -Method 'Delete' -Uri $Uri
-				}
+
+				$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $SessionHostName + '/userSessions/' + $SessionID + '?api-version=2022-02-10-preview&force=True'
+				Invoke-RestMethod -Headers $Header -Method 'Delete' -Uri $Uri
 			}
 			catch 
 			{
@@ -233,7 +223,7 @@ try
 
 	function TryResetSessionHostDrainModeAndUserSessions
     {
-		[CmdletBinding(SupportsShouldProcess)]
+		[CmdletBinding()]
 		param (
 			[Parameter(Mandatory = $true)]
 			[hashtable]$Header,
@@ -248,28 +238,29 @@ try
 			[string]$ResourceManagerUrl,
 
 			[Parameter(Mandatory = $true)]
-			[PSCustomObject]$SessionHost,
+			[bool]$SessionHostDrainMode,
 
 			[Parameter(Mandatory = $true)]
-			[string]$SubscriptionId,
+			[string]$SessionHostName,
 
-			[Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-			[PSCustomObject]$VM
+			[Parameter(Mandatory = $true)]
+			[int]$SessionHostSessions,
+
+			[Parameter(Mandatory = $true)]
+			[string]$SubscriptionId
 		)
 		Begin { }
 		Process 
         {
-			TryUpdateSessionHostDrainMode -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost $SessionHost -SubscriptionId $SubscriptionId -VM $VM -AllowNewSession:$true
-			
-			[string]$SessionHostName = $VM.name
-			if ($SessionHost.properties.sessions -eq 0)
+			TryUpdateSessionHostDrainMode -AllowNewSession $true -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHostDrainMode $SessionHostDrainMode -SessionHostName $SessionHostName -SubscriptionId $SubscriptionId
+
+			if ($SessionHostSessions -eq 0)
             {
 				return
 			}
 
-			Write-Log -HostPoolName $HostPoolName -Warn -Message "Session host '$SessionHostName' still has $($SessionHost.properties.sessions) sessions left behind in broker DB"
+			Write-Log -HostPoolName $HostPoolName -Warn -Message "Session host '$SessionHostName' still has $SessionHostSessions) sessions left behind in broker DB"
 
-			[array]$UserSessions = @()
 			Write-Log -HostPoolName $HostPoolName -Message "Get all user sessions from session host '$SessionHostName'"
 			try 
 			{
@@ -359,16 +350,14 @@ try
 	if (!$SkipUpdateLoadBalancerType -and $HostPool.properties.loadBalancerType -ine 'BreadthFirst')
     {
 		Write-Log -HostPoolName $HostPoolName -Message "Update HostPool with 'BreadthFirst' load balancer type (current: '$($HostPool.properties.loadBalancerType)')"
-		if ($PSCmdlet.ShouldProcess($HostPoolName, "Update HostPool with BreadthFirstLoadBalancer type (current: '$($HostPool.properties.loadBalancerType)')"))
-        {
-			$Body = @{
-				properties = @{
-					loadBalancerType = 'BreadthFirst'
-				}
+
+		$Body = @{
+			properties = @{
+				loadBalancerType = 'BreadthFirst'
 			}
-			$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '?api-version=2022-02-10-preview'
-			$HostPool = Invoke-RestMethod -Headers $Header -Body $Body -Method 'Patch' -Uri $Uri
 		}
+		$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '?api-version=2022-02-10-preview'
+		$HostPool = Invoke-RestMethod -Headers $Header -Body $Body -Method 'Patch' -Uri $Uri
 	}
 
 	Write-Log -HostPoolName $HostPoolName -Message "HostPool info: $($HostPool | Format-List -Force | Out-String)"
@@ -571,17 +560,14 @@ try
 			}
 
 			Write-Log -HostPoolName $HostPoolName -Message "Start session host '$($VM.name)'"
-			if ($PSCmdlet.ShouldProcess($VM.name, 'Start session host'))
-            {
-				$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VM.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VM.name + '/start?api-version=2023-09-01'
-				Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri
-				$StartedVMs += [PSCustomObject]@{
-					Name = $VM.name
-					ResourceGroupName = $VM.id.Split('/')[4]
-				}
-				
-			}
 
+			$Uri = $ResourceManagerUrl + $VM.id.TrimStart('/') + '/start?api-version=2023-09-01'
+			Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri
+			$StartedVMs += [PSCustomObject]@{
+				Name = $VM.name
+				ResourceGroupName = $VM.id.Split('/')[4]
+			}
+				
 			--$Ops.nVMsToStart
 			if ($Ops.nVMsToStart -lt 0)
             {
@@ -633,14 +619,14 @@ try
 	}
 
 	# Object that contains names of session hosts that will be stopped
-	$VMsToStop = @{}
+	$VMsToStop = @()
 	[array]$VMsToStopAfterLogOffTimeOut = @()
 
 	Write-Log -HostPoolName $HostPoolName -Message 'Find session hosts that are running and allowing new sessions, sort them by number of user sessions'
 	foreach ($SessionHost in ($SessionHosts | Where-Object { $_.properties.allowNewSession } | Sort-Object { $_.properties.sessions }))
     {
 		$VM = $VMs | Where-Object { $_.id -ieq $SessionHost.properties.resourceId }
-		if ($VM.properties.instanceView.statuses[1].displayStatus -ine 'VM running')
+		if ($VM.properties.instanceView.statuses[1].displayStatus -ieq 'VM running')
 		{
 			if (!$Ops.nVMsToStop)
 			{
@@ -654,14 +640,15 @@ try
 				# Note: why break ? Because the list this loop iterates through is sorted by number of sessions, if it hits this, the rest of items in the loop will also hit this
 				break
 			}
-
-			TryUpdateSessionHostDrainMode -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost $SessionHost -SubscriptionId $SubscriptionId -VM $VM -AllowNewSession:$false
+			
+			$SessionHostDrainMode = if ($SessionHost.properties.allowNewSession -eq 'True') { $true } else { $false }
+			TryUpdateSessionHostDrainMode -AllowNewSession $false -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHostDrainMode $SessionHostDrainMode -SessionHostName $VM.name -SubscriptionId $SubscriptionId
 
 			# Note: check if there were new user sessions since session host info was 1st fetched
 			if ($SessionHost.properties.sessions -gt 0 -and !$LimitSecondsToForceLogOffUser)
 			{
 				Write-Log -HostPoolName $HostPoolName -Warn -Message "Session host '$($VM.name)' has $($SessionHost.properties.sessions) sessions but limit seconds to force log off user is set to 0, so will not stop any more session hosts (https://aka.ms/wvdscale#how-the-scaling-tool-works)"
-				TryUpdateSessionHostDrainMode -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost $SessionHost -SubscriptionId $SubscriptionId -VM $VM -AllowNewSession:$true
+				TryUpdateSessionHostDrainMode -AllowNewSession $true -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHostDrainMode $SessionHostDrainMode -SessionHostName $VM.name -SubscriptionId $SubscriptionId 
 				continue
 			}
 
@@ -671,15 +658,15 @@ try
 				try 
 				{
 					$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $VM.name + '/userSessions?api-version=2022-02-10-preview'
-					$UserSessions = @(Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri)
+					$UserSessions = Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri
 				}
-				catch 
+				catch
 				{
 					Write-Log -HostPoolName $HostPoolName -Warn -Message "Failed to retrieve user sessions of session host '$($VM.name)': $($PSItem | Format-List -Force | Out-String)"
 				}
 
 				Write-Log -HostPoolName $HostPoolName -Message "Send log off message to active user sessions on session host: '$($VM.name)'"
-				foreach ($UserSession in $UserSessions) 
+				foreach ($UserSession in $UserSessions)
 				{
 					if($UserSession.properties.sessionState -ine 'Active')
 					{
@@ -692,11 +679,9 @@ try
 					try 
 					{
 						Write-Log -HostPoolName $HostPoolName -Message "Send a log off message to user: '$User', session ID: $SessionID"
-						if ($PSCmdlet.ShouldProcess($SessionID, 'Send a log off message to user with session ID'))
-						{
-							$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $VM.name + '/userSessions/' + $SessionID + '/sendMessage?api-version=2022-02-10-preview'
-							Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri -Body (@{ 'messageTitle' = $LogOffMessageTitle; 'messageBody' = "$LogOffMessageBody You will be logged off in $LimitSecondsToForceLogOffUser seconds" } | ConvertTo-Json)
-						}
+
+						$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts/' + $VM.name + '/userSessions/' + $SessionID + '/sendMessage?api-version=2022-02-10-preview'
+						Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri -Body (@{ 'messageTitle' = $LogOffMessageTitle; 'messageBody' = "$LogOffMessageBody You will be logged off in $LimitSecondsToForceLogOffUser seconds" } | ConvertTo-Json)
 					}
 					catch 
 					{
@@ -708,12 +693,9 @@ try
 			else
 			{
 				Write-Log -HostPoolName $HostPoolName -Message "Stop session host '$($VM.name)'"
-				if ($PSCmdlet.ShouldProcess($VM.name, 'Stop session host'))
-				{
-					$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VM.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VM.name + '/deallocate?api-version=2023-09-01'
-					Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri
-					$VMsToStop += $VM
-				}
+				$Uri = $ResourceManagerUrl + $VM.id.TrimStart('/') + '/deallocate?api-version=2023-09-01'
+				Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri
+				$VMsToStop += $VM
 			}
 
 			--$Ops.nVMsToStop
@@ -726,10 +708,8 @@ try
 	if ($VMsToStopAfterLogOffTimeOut)
     {
 		Write-Log -HostPoolName $HostPoolName -Message "Wait $LimitSecondsToForceLogOffUser seconds for users to log off"
-		if ($PSCmdlet.ShouldProcess("for $LimitSecondsToForceLogOffUser seconds", 'Wait for users to log off'))
-        {
-			Start-Sleep -Seconds $LimitSecondsToForceLogOffUser
-		}
+
+		Start-Sleep -Seconds $LimitSecondsToForceLogOffUser
 
 		Write-Log -HostPoolName $HostPoolName -Message "Force log off users and stop remaining $($VMsToStopAfterLogOffTimeOut.Count) session hosts"
 		foreach ($VM in $VMsToStopAfterLogOffTimeOut)
@@ -739,12 +719,10 @@ try
 			$VM.UserSessions | TryForceLogOffUser -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SubscriptionId $SubscriptionId
 			
 			Write-Log -HostPoolName $HostPoolName -Message "Stop session host '$($VM.name)'"
-			if ($PSCmdlet.ShouldProcess($VM.name, 'Stop session host'))
-            {
-				$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VM.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VM.name + '/deallocate?api-version=2023-09-01'
-				Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri
-				$VMsToStop += $VM
-			}
+
+			$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VM.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VM.name + '/deallocate?api-version=2023-09-01'
+			Invoke-RestMethod -Headers $Header -Method 'Post' -Uri $Uri
+			$VMsToStop += $VM
 		}
 	}
 
@@ -760,12 +738,14 @@ try
 	{
 		foreach($VMToStop in $VMsToStop)
 		{
-			$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/resourceGroups/' + $VMToStop.id.Split('/')[4] + '/providers/Microsoft.Compute/virtualMachines/' + $VMToStop.name + '?api-version=2024-03-01'
+			$Uri = $ResourceManagerUrl + $VMToStop.id.TrimStart('/') + '?$expand=instanceView&api-version=2024-03-01'
 			$VMPowerState = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).properties.instanceView.statuses[1].displayStatus
 			if ($VMPowerState -eq 'VM deallocated')
 			{
-				Write-Log -HostPoolName $HostPoolName -Message "Session host '$($VMToStop.name)' is running"
-				TryResetSessionHostDrainModeAndUserSessions -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHost ($SessionHosts | Where-Object { $_.properties.resourceId -ieq $VMToStop.id }) -SubscriptionId $SubscriptionId -VM $VMToStop
+				Write-Log -HostPoolName $HostPoolName -Message "Session host '$($VMToStop.name)' is stopping"
+				$SessionHost = $SessionHosts | Where-Object { $_.properties.resourceId -ieq $VMToStop.id }
+				$SessionHostDrainMode = if ($SessionHost.properties.allowNewSession -eq 'True') { $true } else { $false }
+				TryResetSessionHostDrainModeAndUserSessions -Header $Header -HostPoolName $HostPoolName -HostPoolResourceGroupName $HostPoolResourceGroupName -ResourceManagerUrl $ResourceManagerUrl -SessionHostDrainMode $SessionHostDrainMode -SessionHostName $VMToStop.name -SessionHostSessions $SessionHost.properties.sessions -SubscriptionId $SubscriptionId
 				$VMsToStop = $VMsToStop -ne $VMToStop
 			}
 		}
