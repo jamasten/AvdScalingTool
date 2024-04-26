@@ -583,29 +583,6 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
   }
 }
 
-resource function 'Microsoft.Web/sites/functions@2020-12-01' = {
-  parent: functionApp
-  name: functionName
-  properties: {
-    config: {
-      disabled: false
-      bindings: [
-        {
-          name: 'Timer'
-          type: 'timerTrigger'
-          direction: 'in'
-          schedule: '0 */15 * * * *'
-        }
-      ]
-    }
-    files: {
-      'requirements.psd1': loadTextContent('artifacts/requirements.psd1')
-      'run.ps1': loadTextContent('artifacts/run.ps1')
-      '../profile.ps1': loadTextContent('artifacts/profile.ps1')
-    }
-  }
-}
-
 resource privateEndpoint_functionApp 'Microsoft.Network/privateEndpoints@2023-04-01' = {
   name: replace(privateEndpointName, 'subType', 'fa')
   location: location
@@ -641,6 +618,33 @@ resource privateDnsZoneGroup_functionApp 'Microsoft.Network/privateEndpoints/pri
       }
     ]
   }
+}
+
+resource function 'Microsoft.Web/sites/functions@2020-12-01' = {
+  parent: functionApp
+  name: functionName
+  properties: {
+    config: {
+      disabled: false
+      bindings: [
+        {
+          name: 'Timer'
+          type: 'timerTrigger'
+          direction: 'in'
+          schedule: '0 */15 * * * *'
+        }
+      ]
+    }
+    files: {
+      'requirements.psd1': loadTextContent('artifacts/requirements.psd1')
+      'run.ps1': loadTextContent('artifacts/run.ps1')
+      '../profile.ps1': loadTextContent('artifacts/profile.ps1')
+    }
+  }
+  dependsOn: [
+    privateEndpoint_functionApp
+    privateDnsZoneGroup_functionApp
+  ]
 }
 
 // Gives the function app the "Desktop Virtualization Power On Off Contributor" role on the resource groups containing the hosts and host pool

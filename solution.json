@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "4827847752802886793"
+      "templateHash": "10392564606176481867"
     }
   },
   "parameters": {
@@ -1127,32 +1127,6 @@
       ]
     },
     {
-      "type": "Microsoft.Web/sites/functions",
-      "apiVersion": "2020-12-01",
-      "name": "[format('{0}/{1}', variables('functionAppName'), variables('functionName'))]",
-      "properties": {
-        "config": {
-          "disabled": false,
-          "bindings": [
-            {
-              "name": "Timer",
-              "type": "timerTrigger",
-              "direction": "in",
-              "schedule": "0 */15 * * * *"
-            }
-          ]
-        },
-        "files": {
-          "requirements.psd1": "[variables('$fxv#2')]",
-          "run.ps1": "[variables('$fxv#3')]",
-          "../profile.ps1": "[variables('$fxv#4')]"
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
-      ]
-    },
-    {
       "type": "Microsoft.Network/privateEndpoints",
       "apiVersion": "2023-04-01",
       "name": "[replace(variables('privateEndpointName'), 'subType', 'fa')]",
@@ -1193,6 +1167,34 @@
         ]
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'fa'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2020-12-01",
+      "name": "[format('{0}/{1}', variables('functionAppName'), variables('functionName'))]",
+      "properties": {
+        "config": {
+          "disabled": false,
+          "bindings": [
+            {
+              "name": "Timer",
+              "type": "timerTrigger",
+              "direction": "in",
+              "schedule": "0 */15 * * * *"
+            }
+          ]
+        },
+        "files": {
+          "requirements.psd1": "[variables('$fxv#2')]",
+          "run.ps1": "[variables('$fxv#3')]",
+          "../profile.ps1": "[variables('$fxv#4')]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', replace(variables('privateEndpointName'), 'subType', 'fa'), 'default')]",
         "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'fa'))]"
       ]
     },
