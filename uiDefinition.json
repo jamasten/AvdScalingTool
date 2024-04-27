@@ -400,6 +400,17 @@
                                 "required": true
                             },
                             "options": {}
+                        },
+                        {
+                            "name": "privateLinkScope",
+                            "type": "Microsoft.Solutions.ResourceSelector",
+                            "visible": "[steps('monitoring').enableMonitoring]",
+                            "label": "Azure Monitor Private Link Scope",
+                            "resourceType": "Microsoft.Insights/privateLinkScopes",
+                            "constraints": {
+                                "required": true
+                            },
+                            "options": {}
                         }
                     ],
                     "visible": true
@@ -446,6 +457,7 @@
                 "logAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').logAnalyticsWorkspace.id, '')]",
                 "minimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
                 "privateEndpointsSubnetResourceId": "[steps('network').privateEndpointsSubnet]",
+                "privateLinkScopeName": "[if(steps('monitoring').enableMonitoring, steps('monitoring').privateLinkScope.name, '')]",
                 "sessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
                 "sessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
                 "tags": "[steps('tags').tags]"
