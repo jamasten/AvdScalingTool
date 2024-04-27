@@ -113,6 +113,9 @@ param minimumNumberOfRdsh string = '0'
 @description('The resource ID of the subnet for the private endpoints.')
 param privateEndpointsSubnetResourceId string
 
+@description('The name of the private link scope for the Azure resources.')
+param privateLinkScopeName string
+
 @description('The name of the resource group containing the AVD session hosts.')
 param sessionHostsResourceGroupName string
 
@@ -448,6 +451,20 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
     Application_Type: 'web'
   }
   kind: 'web'
+}
+
+#disable-next-line BCP081
+resource privateLinkScope 'microsoft.insights/privateLinkScopes@2021-09-01' existing = {
+  name: privateLinkScopeName
+}
+
+#disable-next-line BCP081
+resource scopedResource 'Microsoft.Insights/privateLinkScopes/scopedResources@2021-09-01' = {
+  parent: privateLinkScope
+  name: applicationInsightsName
+  properties: {
+    linkedResourceId: applicationInsights.id
+  }
 }
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
