@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "5562025388998299105"
+      "templateHash": "9343318579988591084"
     }
   },
   "parameters": {
@@ -186,6 +186,13 @@
       "type": "string",
       "metadata": {
         "description": "The resource ID of the subnet for the private endpoints."
+      }
+    },
+    "privateLinkScopeName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The name of the private link scope for the Azure resources."
       }
     },
     "sessionHostsResourceGroupName": {
@@ -981,6 +988,17 @@
         "Application_Type": "web"
       },
       "kind": "web"
+    },
+    {
+      "type": "Microsoft.Insights/privateLinkScopes/scopedResources",
+      "apiVersion": "2021-09-01",
+      "name": "[format('{0}/{1}', parameters('privateLinkScopeName'), variables('applicationInsightsName'))]",
+      "properties": {
+        "linkedResourceId": "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
+      ]
     },
     {
       "type": "Microsoft.Web/serverfarms",

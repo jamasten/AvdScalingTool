@@ -114,7 +114,7 @@ param minimumNumberOfRdsh string = '0'
 param privateEndpointsSubnetResourceId string
 
 @description('The name of the private link scope for the Azure resources.')
-param privateLinkScopeName string
+param privateLinkScopeName string = ''
 
 @description('The name of the resource group containing the AVD session hosts.')
 param sessionHostsResourceGroupName string
