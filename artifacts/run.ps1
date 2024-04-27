@@ -295,11 +295,11 @@ try
 
 
 	#region validate host pool, validate / update HostPool load balancer type, ensure there is at least 1 session host, get num of user sessions
-	# Validate and get HostPool info
+	# Validate and get host pool info
 	$HostPool = $null
 	try 
 	{
-		Write-Log -HostPoolName $HostPoolName -Message "Get Hostpool info of '$HostPoolName' in resource group '$HostPoolResourceGroupName'"
+		Write-Log -HostPoolName $HostPoolName -Message "Get host pool information"
 		$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '?api-version=2022-02-10-preview'
 		$HostPool = Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri
 
@@ -310,7 +310,7 @@ try
 	}
 	catch 
 	{
-		throw [System.Exception]::new("Failed to get Hostpool info of '$HostPoolName' in resource group '$HostPoolResourceGroupName'. Ensure that you have entered the correct values", $PSItem.Exception)
+		throw [System.Exception]::new("Failed to get host pool info of '$HostPoolName' in resource group '$HostPoolResourceGroupName'. Ensure that you have entered the correct values", $PSItem.Exception)
 	}
 
 	# Ensure HostPool load balancer type is not persistent
@@ -319,18 +319,18 @@ try
 		throw "HostPool '$HostPoolName' is configured with 'Persistent' load balancer type. Scaling tool only supports these load balancer types: BreadthFirst, DepthFirst"
 	}
 
-	Write-Log -HostPoolName $HostPoolName -Message 'Get all session hosts'
+	Write-Log -HostPoolName $HostPoolName -Message 'Get session hosts'
 	$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/sessionHosts?api-version=2022-02-10-preview'
 	$SessionHosts = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).value
 
 	if (!$SessionHosts)
     {
-		Write-Log -HostPoolName $HostPoolName -Message "There are no session hosts in the Hostpool '$HostPoolName'. Ensure that hostpool has session hosts"
+		Write-Log -HostPoolName $HostPoolName -Message "There are no session hosts in the host pool '$HostPoolName'. Ensure that hostpool has session hosts"
 		Write-Log -HostPoolName $HostPoolName -Message 'End'
 		return
 	}
 
-	Write-Log -HostPoolName $HostPoolName -Message 'Get number of user sessions in Hostpool'
+	Write-Log -HostPoolName $HostPoolName -Message 'Get number of user sessions in host pool'
 	$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '/userSessions?api-version=2022-02-10-preview'
 	[int]$nUserSessions = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).value.Count
 
@@ -385,7 +385,7 @@ try
 	# endregion Peak Hours #
 
 
-	#region get all session hosts, VMs & user sessions info and compute workload
+	#region get session hosts, VMs & user sessions info and compute workload
 	# Note: session host is considered "running" if its running AND is in desired states AND allowing new sessions
 	# Number of session hosts that are running, are in desired states and allowing new sessions
 	[int]$nRunningVMs = 0
@@ -429,7 +429,7 @@ try
 		# Get the number of cores for VM size SKU
 		if (!$VMSizeCores.ContainsKey($VirtualMachine.properties.hardwareProfile.vmSize))
         {
-			Write-Log -HostPoolName $HostPoolName -Message "Get all VM sizes in location: $($VirtualMachine.location)"
+			Write-Log -HostPoolName $HostPoolName -Message "Get VM sizes in $($VirtualMachine.location)"
 
 			$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId + '/providers/Microsoft.Compute/locations/' + $VirtualMachine.location + '/vmSizes?api-version=2024-03-01'
 			$VMSizes = (Invoke-RestMethod -Headers $Header -Method 'Get' -Uri $Uri).value
