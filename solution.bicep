@@ -376,44 +376,48 @@ resource share 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01
   }
 }
 
-resource privateEndpoints_storage 'Microsoft.Network/privateEndpoints@2023-04-01' = [ for resource in storageSubResources: {
-  name: replace(privateEndpointName, 'subType', '${resource}-st')
-  location: location
-  tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
-  properties: {
-    customNetworkInterfaceName: replace(networkInterfaceName, 'subType', '${resource}-st')
-    privateLinkServiceConnections: [
-      {
-        name: replace(privateEndpointName, 'subType', '${resource}-st')
-        properties: {
-          privateLinkServiceId: storageAccount.id
-          groupIds: [
-            resource
-          ]
+resource privateEndpoints_storage 'Microsoft.Network/privateEndpoints@2023-04-01' = [
+  for resource in storageSubResources: {
+    name: replace(privateEndpointName, 'subType', '${resource}-st')
+    location: location
+    tags: contains(tags, 'Microsoft.Network/privateEndpoints') ? tags['Microsoft.Network/privateEndpoints'] : {}
+    properties: {
+      customNetworkInterfaceName: replace(networkInterfaceName, 'subType', '${resource}-st')
+      privateLinkServiceConnections: [
+        {
+          name: replace(privateEndpointName, 'subType', '${resource}-st')
+          properties: {
+            privateLinkServiceId: storageAccount.id
+            groupIds: [
+              resource
+            ]
+          }
         }
+      ]
+      subnet: {
+        id: privateEndpointsSubnetResourceId
       }
-    ]
-    subnet: {
-      id: privateEndpointsSubnetResourceId
     }
   }
-}]
+]
 
-resource privateDnsZoneGroups_storage 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2021-08-01' = [for (resource, i) in storageSubResources: {
-  parent: privateEndpoints_storage[i]
-  name: storageAccount.name
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          #disable-next-line use-resource-id-functions
-          privateDnsZoneId: storagePrivateDnsZoneResourceIds[i]
+resource privateDnsZoneGroups_storage 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2021-08-01' = [
+  for (resource, i) in storageSubResources: {
+    parent: privateEndpoints_storage[i]
+    name: storageAccount.name
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: 'ipconfig1'
+          properties: {
+            #disable-next-line use-resource-id-functions
+            privateDnsZoneId: storagePrivateDnsZoneResourceIds[i]
+          }
         }
-      }
-    ]
+      ]
+    }
   }
-}]
+]
 
 resource diagnosticSetting_storage_blob 'Microsoft.Insights/diagnosticsettings@2017-05-01-preview' =
   if (!empty(logAnalyticsWorkspaceResourceId)) {
