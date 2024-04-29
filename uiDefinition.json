@@ -457,7 +457,7 @@
                 "logAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').logAnalyticsWorkspace.id, '')]",
                 "minimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
                 "privateEndpointsSubnetResourceId": "[steps('network').privateEndpointsSubnet]",
-                "privateLinkScopeName": "[if(steps('monitoring').enableMonitoring, steps('monitoring').privateLinkScope.name, '')]",
+                "privateLinkScopeResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').privateLinkScope.id, '')]",
                 "sessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
                 "sessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
                 "tags": "[steps('tags').tags]"

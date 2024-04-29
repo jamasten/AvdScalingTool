@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "9343318579988591084"
+      "templateHash": "5893033582450077032"
     }
   },
   "parameters": {
@@ -188,11 +188,11 @@
         "description": "The resource ID of the subnet for the private endpoints."
       }
     },
-    "privateLinkScopeName": {
+    "privateLinkScopeResourceId": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "The name of the private link scope for the Azure resources."
+        "description": "The resource ID of the Azure Monitor Private Link Scope."
       }
     },
     "sessionHostsResourceGroupName": {
@@ -990,17 +990,6 @@
       "kind": "web"
     },
     {
-      "type": "Microsoft.Insights/privateLinkScopes/scopedResources",
-      "apiVersion": "2021-09-01",
-      "name": "[format('{0}/{1}', parameters('privateLinkScopeName'), variables('applicationInsightsName'))]",
-      "properties": {
-        "linkedResourceId": "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
-      ]
-    },
-    {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2023-01-01",
       "name": "[variables('appServicePlanName')]",
@@ -1214,6 +1203,65 @@
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
         "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', replace(variables('privateEndpointName'), 'subType', 'fa'), 'default')]",
         "[resourceId('Microsoft.Network/privateEndpoints', replace(variables('privateEndpointName'), 'subType', 'fa'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('PrivateLinkScope_{0}', parameters('timestamp'))]",
+      "subscriptionId": "[split(parameters('privateLinkScopeResourceId'), '/')[2]]",
+      "resourceGroup": "[split(parameters('privateLinkScopeResourceId'), '/')[4]]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "applicationInsightsName": {
+            "value": "[variables('applicationInsightsName')]"
+          },
+          "applicationInsightsResourceId": {
+            "value": "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
+          },
+          "privateLinkScopeResourceId": {
+            "value": "[parameters('privateLinkScopeResourceId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.26.170.59819",
+              "templateHash": "7626274648984515306"
+            }
+          },
+          "parameters": {
+            "applicationInsightsName": {
+              "type": "string"
+            },
+            "applicationInsightsResourceId": {
+              "type": "string"
+            },
+            "privateLinkScopeResourceId": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/privateLinkScopes/scopedResources",
+              "apiVersion": "2021-09-01",
+              "name": "[format('{0}/{1}', split(parameters('privateLinkScopeResourceId'), '/')[8], parameters('applicationInsightsName'))]",
+              "properties": {
+                "linkedResourceId": "[parameters('applicationInsightsResourceId')]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
       ]
     },
     {
