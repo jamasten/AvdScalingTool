@@ -139,6 +139,8 @@ var locations = loadJsonContent('data/locations.json')[environment().name]
 var namingConvention = '${identifier}-resourceType-scaling-avd-${environmentAbbreviation}-${locations[location].abbreviation}'
 var networkInterfaceName = replace(namingConvention, 'resourceType', '${resourceTypes.networkInterfaces}-subType')
 var privateEndpointName = replace(namingConvention, 'resourceType', '${resourceTypes.privateEndpoints}-subType')
+var privateLinkScopeResourceGroupName = empty(logAnalyticsWorkspaceResourceId) ? subscription().id : split(privateLinkScopeResourceId, '/')[4]
+var privateLinkScopeSubscriptionId = empty(logAnalyticsWorkspaceResourceId) ? resourceGroup().name : split(privateLinkScopeResourceId, '/')[2]
 var resourceTypes = loadJsonContent('data/resourceTypes.json')
 var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
   ? [
@@ -455,7 +457,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
 
 module privateLinkScope 'modules/privateLinkScope.bicep' = {
   name: 'PrivateLinkScope_${timestamp}'
-  scope: resourceGroup(split(privateLinkScopeResourceId, '/')[2], split(privateLinkScopeResourceId, '/')[4])
+  scope: resourceGroup(privateLinkScopeSubscriptionId, privateLinkScopeResourceGroupName)
   params: {
     applicationInsightsName: applicationInsightsName
     applicationInsightsResourceId: applicationInsights.id

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "5893033582450077032"
+      "templateHash": "6444375603464913283"
     }
   },
   "parameters": {
@@ -636,6 +636,8 @@
     "namingConvention": "[format('{0}-resourceType-scaling-avd-{1}-{2}', parameters('identifier'), parameters('environmentAbbreviation'), variables('locations')[parameters('location')].abbreviation)]",
     "networkInterfaceName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-subType', variables('resourceTypes').networkInterfaces))]",
     "privateEndpointName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-subType', variables('resourceTypes').privateEndpoints))]",
+    "privateLinkScopeResourceGroupName": "[if(empty(parameters('logAnalyticsWorkspaceResourceId')), subscription().id, split(parameters('privateLinkScopeResourceId'), '/')[4])]",
+    "privateLinkScopeSubscriptionId": "[if(empty(parameters('logAnalyticsWorkspaceResourceId')), resourceGroup().name, split(parameters('privateLinkScopeResourceId'), '/')[2])]",
     "resourceTypes": "[variables('$fxv#1')]",
     "roleAssignments": "[if(equals(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')), createArray(parameters('hostPoolResourceGroupName')), createArray(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')))]",
     "storageAccountName": "[replace(replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').storageAccounts), '-', '')]",
@@ -1209,8 +1211,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('PrivateLinkScope_{0}', parameters('timestamp'))]",
-      "subscriptionId": "[split(parameters('privateLinkScopeResourceId'), '/')[2]]",
-      "resourceGroup": "[split(parameters('privateLinkScopeResourceId'), '/')[4]]",
+      "subscriptionId": "[variables('privateLinkScopeSubscriptionId')]",
+      "resourceGroup": "[variables('privateLinkScopeResourceGroupName')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
