@@ -17,13 +17,15 @@ The following resources are deployed with this solution:
 
 * **Privileges** - Ensure the principal deploying this solution has Owner and Key Vault Administrator rights on the subscription.
 * **Monitoring** - By specifying a value for the "LogAnalyticsWorkspaceResourceId" parameter, the logs for the storage account and application insights data will be sent to the target Log Analytics Workspace. Since this solution uses a zero trust configuration, an Azure Monitor Private Link Scope is required.
-* **Networking** - The following private DNS zones must exist:
-  * Azure Blobs
-  * Azure Files
-  * Azure Functions
-  * Azure Queues
-  * Azure Tables
-  * Key Vault
+* **Networking**
+  * The following private DNS zones must exist:
+    * Azure Blobs
+    * Azure Files
+    * Azure Functions
+    * Azure Queues
+    * Azure Tables
+    * Key Vault
+  * Delegated Subnet: this solution deploys a Function App with private outbound access. This configuration requires a delegated subnet for "Microsoft.Web/serverFarms". [Reference](https://learn.microsoft.com/azure/app-service/configure-vnet-integration-enable#configure-with-azure-powershell)
 
 ## Deploy to Azure
 
