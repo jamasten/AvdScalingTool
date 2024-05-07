@@ -1,6 +1,6 @@
 # Azure Virtual Desktop Scaling Tool
 
-This solution deploys an adaptation of the AVD Scaling Tool provided in the [Microsoft Learn documentation](https://docs.microsoft.com/azure/virtual-desktop/set-up-scaling-script). While AVD AutoScale (aka Scaling Plans) has replaced the AVD Scaling Tool, AutoScale is not available in every Azure cloud yet. In the Microsoft Learn documentation, the AVD Scaling Tool solution makes use of an automation account and a logic app. To ease the burden of the administrator and reduce cost, we have opted for a function app instead. Lastly, to improve security, this solution has been developed to use a zero trust configuration.
+This solution deploys an adaptation of the AVD Scaling Tool provided in the [Microsoft Learn documentation](https://docs.microsoft.com/azure/virtual-desktop/set-up-scaling-script). While AVD AutoScale (aka Scaling Plans) has replaced the AVD Scaling Tool, AutoScale is not available in every Azure cloud yet. In the Microsoft Learn documentation, the AVD Scaling Tool solution makes use of an automation account and a logic app. To ease the burden of the administrator and reduce cost, we have opted for a function app instead. Lastly, to improve security and reliability, this solution has been developed to use a zero trust configuration and makes use of API calls instead of calling Az cmdlets.
 
 The following resources are deployed with this solution:
 
