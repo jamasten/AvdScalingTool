@@ -567,7 +567,8 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
         }
         {
           name: 'ResourceManagerUrl'
-          value: environment().resourceManager
+          // This workaround is needed because the environment().resourceManager value is missing the trailing slash for some Azure environments
+          value: endsWith(environment().resourceManager, '/') ? environment().resourceManager : '${environment().resourceManager}/'
         }
         {
           name: 'SessionThresholdPerCPU'
