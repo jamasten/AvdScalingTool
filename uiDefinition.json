@@ -383,17 +383,9 @@
                     "label": "Monitoring",
                     "elements": [
                         {
-                            "name": "enableMonitoring",
-                            "type": "Microsoft.Common.CheckBox",
-                            "label": "Enable Monitoring",
-                            "constraints": {
-                                "required": false
-                            }
-                        },
-                        {
                             "name": "logAnalyticsWorkspace",
                             "type": "Microsoft.Solutions.ResourceSelector",
-                            "visible": "[steps('monitoring').enableMonitoring]",
+                            "visible": true,
                             "label": "Log Analytics Workspace",
                             "resourceType": "Microsoft.OperationalInsights/workspaces",
                             "constraints": {
@@ -404,7 +396,7 @@
                         {
                             "name": "privateLinkScope",
                             "type": "Microsoft.Solutions.ResourceSelector",
-                            "visible": "[steps('monitoring').enableMonitoring]",
+                            "visible": true,
                             "label": "Azure Monitor Private Link Scope",
                             "resourceType": "Microsoft.Insights/privateLinkScopes",
                             "constraints": {
@@ -454,10 +446,10 @@
                 "identifier": "[steps('basics').naming.identifier]",
                 "keyVaultPrivateDnsZoneResourceId": "[steps('network').privateDnsZones.keyVault]",
                 "limitSecondsToForceLogOffUser": "[steps('scaling').options.forceLogOff]",
-                "logAnalyticsWorkspaceResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').logAnalyticsWorkspace.id, '')]",
+                "logAnalyticsWorkspaceResourceId": "[steps('monitoring').logAnalyticsWorkspace.id]",
                 "minimumNumberOfRdsh": "[steps('scaling').options.minimumHosts]",
                 "privateEndpointsSubnetResourceId": "[steps('network').privateEndpointsSubnet]",
-                "privateLinkScopeResourceId": "[if(steps('monitoring').enableMonitoring, steps('monitoring').privateLinkScope.id, '')]",
+                "privateLinkScopeResourceId": "[steps('monitoring').privateLinkScope.id]",
                 "sessionHostsResourceGroupName": "[steps('scaling').scope.sessionHostsResourceGroup]",
                 "sessionThresholdPerCPU": "[steps('scaling').options.cpuThreshold]",
                 "tags": "[steps('tags').tags]"
