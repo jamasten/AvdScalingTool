@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.27.1.19265",
-      "templateHash": "13267916349675254258"
+      "templateHash": "16159947942284726566"
     }
   },
   "parameters": {
@@ -636,8 +636,8 @@
     "namingConvention": "[format('{0}-resourceType-scaling-avd-{1}-{2}', parameters('identifier'), parameters('environmentAbbreviation'), variables('locations')[parameters('location')].abbreviation)]",
     "networkInterfaceName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-subType', variables('resourceTypes').networkInterfaces))]",
     "privateEndpointName": "[replace(variables('namingConvention'), 'resourceType', format('{0}-subType', variables('resourceTypes').privateEndpoints))]",
-    "privateLinkScopeResourceGroupName": "[if(empty(parameters('logAnalyticsWorkspaceResourceId')), subscription().id, split(parameters('privateLinkScopeResourceId'), '/')[4])]",
-    "privateLinkScopeSubscriptionId": "[if(empty(parameters('logAnalyticsWorkspaceResourceId')), resourceGroup().name, split(parameters('privateLinkScopeResourceId'), '/')[2])]",
+    "privateLinkScopeResourceGroupName": "[if(empty(parameters('logAnalyticsWorkspaceResourceId')), resourceGroup().name, split(parameters('privateLinkScopeResourceId'), '/')[4])]",
+    "privateLinkScopeSubscriptionId": "[if(empty(parameters('logAnalyticsWorkspaceResourceId')), subscription().subscriptionId, split(parameters('privateLinkScopeResourceId'), '/')[2])]",
     "resourceTypes": "[variables('$fxv#1')]",
     "roleAssignments": "[if(equals(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')), createArray(parameters('hostPoolResourceGroupName')), createArray(parameters('hostPoolResourceGroupName'), parameters('sessionHostsResourceGroupName')))]",
     "storageAccountName": "[replace(replace(variables('namingConvention'), 'resourceType', variables('resourceTypes').storageAccounts), '-', '')]",

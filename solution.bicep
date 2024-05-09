@@ -139,8 +139,8 @@ var locations = loadJsonContent('data/locations.json')[environment().name]
 var namingConvention = '${identifier}-resourceType-scaling-avd-${environmentAbbreviation}-${locations[location].abbreviation}'
 var networkInterfaceName = replace(namingConvention, 'resourceType', '${resourceTypes.networkInterfaces}-subType')
 var privateEndpointName = replace(namingConvention, 'resourceType', '${resourceTypes.privateEndpoints}-subType')
-var privateLinkScopeResourceGroupName = empty(logAnalyticsWorkspaceResourceId) ? subscription().id : split(privateLinkScopeResourceId, '/')[4]
-var privateLinkScopeSubscriptionId = empty(logAnalyticsWorkspaceResourceId) ? resourceGroup().name : split(privateLinkScopeResourceId, '/')[2]
+var privateLinkScopeResourceGroupName = empty(logAnalyticsWorkspaceResourceId) ? resourceGroup().name : split(privateLinkScopeResourceId, '/')[4]
+var privateLinkScopeSubscriptionId = empty(logAnalyticsWorkspaceResourceId) ? subscription().subscriptionId : split(privateLinkScopeResourceId, '/')[2]
 var resourceTypes = loadJsonContent('data/resourceTypes.json')
 var roleAssignments = hostPoolResourceGroupName == sessionHostsResourceGroupName
   ? [
