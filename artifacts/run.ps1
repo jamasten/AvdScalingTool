@@ -346,7 +346,7 @@ try
 			}
 		}
 		$Uri = $ResourceManagerUrl + 'subscriptions/' + $SubscriptionId  + '/resourceGroups/' + $HostPoolResourceGroupName + '/providers/Microsoft.DesktopVirtualization/hostPools/' + $HostPoolName + '?api-version=2022-02-10-preview'
-		$HostPool = Invoke-RestMethod -Headers $Header -Body $Body -Method 'Patch' -Uri $Uri
+		$HostPool = Invoke-RestMethod -Headers $Header -Body $($Body | ConvertTo-Json) -Method 'Patch' -Uri $Uri
 	}
 	Write-Log -HostPoolName $HostPoolName -Message "Number of session hosts in the HostPool: $($SessionHosts.Count)"
 	#endregion
